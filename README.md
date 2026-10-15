@@ -2,6 +2,13 @@
 
 [歲月流明](README.zh-TW.md)
 
+<p align="center">
+  <img src="Icon.png"
+       width="100"
+       height="100"
+       alt="Icon">
+</p>
+
 **A Privacy-Conscious Proof of Concept for Independent Living Monitoring**
 
 ## 1. Project Overview
@@ -52,7 +59,7 @@ The planned demonstration includes:
 - **Virtual smart lights:** Interactive controls representing lights in different rooms.
 - **Event logging:** Recording light on/off events with timestamps in a database.
 - **Activity timeline:** Displaying lighting activity as a Gantt-style timeline.
-- **Basic system workflow:** Demonstrating how lighting events could be collected, stored, and presented to authorized users.
+- **Basic system workflow:** Demonstrating how lighting events could be collected, stored, and presented.
 
 For this initial PoC, lighting events will be generated through the frontend rather than physical sensors or smart light bulbs.
 
@@ -89,3 +96,6 @@ Commercial reuse, redistribution, or modification of these copyrighted materials
 The general concept described in this repository is not claimed to be an exclusive invention or patented technology.
 
 I welcome discussions with smart home companies, independent living technology providers, researchers, and developers who may be interested in evaluating or developing this idea further.
+
+[How to use this repo](UserGuide.md)
+

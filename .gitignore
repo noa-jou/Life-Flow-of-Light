@@ -1,0 +1,42 @@
+# Installed Node.js dependencies (frontend and backend)
+node_modules/
+
+# Compiled code and frontend build output
+dist/
+build/
+
+# Test coverage reports
+coverage/
+.nyc_output/
+
+# Local environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Local SQLite databases and their temporary files
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
+*.db-wal
+*.db-shm
+*.db-journal
+
+# Runtime logs
+*.log
+
+# Tool caches
+.npm/
+.vite/
+.cache/
+*.tsbuildinfo
+
+# Operating system files
+.DS_Store
+Thumbs.db
