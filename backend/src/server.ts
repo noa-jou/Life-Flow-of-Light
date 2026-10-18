@@ -2,14 +2,24 @@ import express from 'express';
 import { database } from './database.js';
 import { randomUUID } from 'node:crypto';
 import { createMorseRouter } from './morse-routes.js';
+import { createLampPositionRouter } from './lamp-position-routes.js';
+import { createHeartbeatRouter } from './heartbeat-routes.js';
 
 const app = express();
 const port = 3000;
 
 // Parse incoming JSON request bodies.
 app.use(express.json());
+
+// URL Routers
+
+// Beating for the light sessions
+app.use(createHeartbeatRouter(database));
+// Change of the lamp position
+app.use(createLampPositionRouter(database));
 // Scan stored lighting sessions when a client requests a Morse check.
 app.use(createMorseRouter(database));
+
 
 // Check that the server can query the database.
 app.get('/health', (_request, response) => {
@@ -20,6 +30,8 @@ app.get('/health', (_request, response) => {
     database: 'connected'
   });
 });
+
+// Basic functions of the backend:
 
 // List all registered lamps, including uninstalled ones.
 app.get('/lamps', (_request, response) => {
