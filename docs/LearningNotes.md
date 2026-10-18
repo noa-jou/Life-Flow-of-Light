@@ -3,8 +3,8 @@
 ## Learning record: Setup, database initialization, and demo data
 
 **Started Date:** 15 October 2026  
-**Updated through:** 17 October 2026  
-**Scope:** Backend setup, SQLite initialization, demo data, lamp registration and naming, and the Morse-check API with ten passing automated tests.
+**Updated through:** 18 October 2026  
+**Scope:** Backend setup, SQLite initialization, local-time demo data, lamp registration and naming, installation and removal, heartbeat recording, lighting-session queries, and Morse detection. Includes manual API checks, live verification scripts, and ten passing Morse tests.
 
 ## About these notes
 
@@ -455,11 +455,13 @@ The daily schedule is:
 
 ### Generating the previous three days
 
-The seed script generates the **previous three complete calendar days at the time it runs**, excluding today. It calculates these dates using UTC+08:00 so that the demo follows the same local schedule regardless of the computer's timezone.
+The seed generates the **previous three complete calendar days**, excluding today, using the local timezone of the computer running it.
 
-The calculation first finds today's calendar date in UTC+08:00, subtracts three, two, and one calendar days, and produces date strings. Each schedule time is then parsed with an explicit +08:00 offset. This avoids relying on the computer's own timezone. The fixed offset matches the chosen Taiwan/Hong Kong demonstration timezone.
+It constructs each date from local calendar values instead of subtracting fixed 24-hour periods. This avoids assuming that every local day has exactly 24 hours, which is not always true during daylight-saving changes.
 
-For example, running the script on 15 October produces 12–14 October; running it on 20 October produces 17–19 October. The dates are calculated at execution time, not continuously refreshed afterward.
+Each scheduled local time is converted into Unix milliseconds before being stored in the database.
+
+For example, running the seed on 17 October generates records for 14–16 October. The dates are calculated when the seed runs and do not refresh automatically afterward.
 
 ### HELP at the end of the third day
 
@@ -514,16 +516,21 @@ It requires both lamps and light_sessions to be empty. If either contains data, 
 
 ### Example of a successful run
 
-On an empty database, successful execution prints the following. This example assumes the script runs on **15 October 2026 in UTC+08:00**:
+Running the seed on an empty database on **17 October 2026**, with the computer using `Asia/Hong_Kong`, produced:
 
 ```text
 Created 3 lamps and 31 lighting sessions.
-Demo dates: 2026-10-12, 2026-10-13, 2026-10-14 (three complete days, UTC+08:00).
-Day 3: B turns off at 21:58:40; HELP runs 21:58:46–22:00:00.
+Schedule timezone: Asia/Hong_Kong.
+Demo dates: 2026-10-14, 2026-10-15, 2026-10-16 (previous three complete local calendar days).
+Day 3, local time: B turns off at 21:58:40; HELP runs 21:58:46–22:00:00.
+Database timestamps are Unix milliseconds.
 Dark periods have no session rows. No live heartbeat sender was started.
 ```
 
-The three dates depend on the execution date. After a successful run, the database contains A, B, C and their 31 lighting sessions. These records can later be retrieved through the session API and displayed on a timeline.
+The timezone and dates depend on the environment and execution date. `Asia/Hong_Kong` is the timezone reported by this particular run, not a fixed timezone in the script.
+
+The database contained three lamps and 31 lighting sessions. A subsequent Morse check returned HELP from the final demo evening.
+
 
 ## 16. What future readers will install
 
@@ -741,83 +748,445 @@ A request whose range ended exactly when HELP began also returned an empty array
 
 These manual checks showed how a client can use the endpoint. Automated tests then checked the behavior more systematically.
 
-## 20. Adding automated Morse tests
+## 21. Regenerating and checking the demo data
 
-I saved the tests in:
+I tested the local-time seed using a fresh database.
 
-```text
-backend/test/morse.test.ts
-```
+First, I stopped the development server with `Ctrl+C` and ensured no other process was using the database.
 
-Then, from `backend/`, I added and ran a package script:
+From `backend/`, I moved the complete data directory into a backup location:
 
 ```bash
-npm pkg set 'scripts.test:morse=node --import tsx --test test/morse.test.ts'
+BACKUP_DIR="$HOME/Life-Flow-of-Light-backups/$(date +%Y%m%d-%H%M%S)"
 
-npm run test:morse
+mkdir -p "$BACKUP_DIR"
+mv data "$BACKUP_DIR/"
+
+echo "Database backup saved to: $BACKUP_DIR/data"
 ```
 
-The script has three parts:
+`BACKUP_DIR` is a shell variable containing the destination path. The date command adds a timestamp to help distinguish backups.
 
-- `node` starts Node.js.
-- `--import tsx` loads support for executing the TypeScript test file.
-- `--test` runs Node.js's test runner.
+Moving the complete directory preserves the database and any SQLite companion files together. The backup is outside the repository.
 
-Supertest sends HTTP requests to the Express application during the tests. A separate development server does not need to be running.
+With the original data directory no longer present, I ran:
 
-The tests create an independent SQLite database in memory. They do not modify the real database in `backend/data/`.
+```bash
+npm run typecheck
+npm run seed
+npm run dev
+```
 
-They also supply controlled times, allowing timing behavior to be checked without waiting for real seconds to pass.
+The database initialization code recreated the data directory and database. The seed populated the empty tables.
 
-### What the ten tests check
+In another terminal, I checked:
 
-1. HELP is detected with the expected start and end times.
-2. An empty dataset returns an empty result array.
-3. Records from another position are excluded.
-4. Messages outside or cut by the requested range are excluded.
-5. Spaces between words are preserved, as in HELP ME.
-6. A long pause separates messages, which remain in time order.
-7. Ordinary long lighting is not treated as a Morse letter.
-8. Invalid input returns HTTP 400.
-9. An unfinished sentence is not returned before the final silence.
-10. Repeated checks leave all stored sessions unchanged.
+```bash
+curl http://127.0.0.1:3000/lamps
+```
 
-The test run completed with:
+The response contained A, B, and C in their expected positions.
+
+I then queried the bedroom through `POST /morse/check`. The result was:
+
+```json
+{
+  "result": [
+    {
+      "start_time": 1792159126000,
+      "end_time": 1792159200000,
+      "message": "HELP"
+    }
+  ]
+}
+```
+
+For this run, those timestamps represent 16 October 2026, from 21:58:46 to 22:00:00 in Asia/Hong_Kong.
+
+This checked the complete path from generating demo records to reading them through the Morse API.
+
+### Local schedules and stored timestamps
+
+The seed uses local time to decide when the demonstration lamps switch on and off.
+
+The database stores those moments as Unix milliseconds. A timestamp identifies the same instant regardless of which timezone is used to display it.
+
+The frontend will handle local-time input and display. The database does not need to change when a viewer uses another timezone.
+
+## 22. Installing and uninstalling lamps
+
+I added:
 
 ```text
-tests 10
-pass 10
-fail 0
-cancelled 0
-skipped 0
-todo 0
+backend/src/lamp-position-routes.ts
 ```
 
-This verifies the cases covered by this test suite. It does not mean that every future feature or every possible input has been tested.
+The server imports and registers the router:
 
-The test database uses a simplified session table. These tests do not replace tests of the actual schema's foreign keys, unique constraints, or serial-number trigger.
+```typescript
+import { createLampPositionRouter } from './lamp-position-routes.js';
+```
 
-Also, our current TypeScript configuration includes `src/`, not `test/`. Running these tests executes the test code; it does not add the test directory to `npm run typecheck`.
+```typescript
+app.use(createLampPositionRouter(database));
+```
 
-## Current checkpoint
+Router registration belongs after JSON-body parsing and before `app.listen(...)`.
+
+### Installing a lamp
+
+The endpoint is:
+
+```text
+PUT /lamps/:id/position
+```
+
+Example:
+
+```bash
+curl -i -X PUT http://127.0.0.1:3000/lamps/4/position \
+  -H 'Content-Type: application/json' \
+  -d '{"position":"living_room"}'
+```
+
+The backend checks that:
+
+- The ID is a positive safe integer.
+- The position is bedroom, bathroom, or living_room.
+- The lamp exists.
+- The lamp is not already installed at another position.
+- The requested position is available.
+
+Repeating an installation at the lamp's existing position returns success without moving anything.
+
+An occupied position returns HTTP `409 Conflict`. Installing a lamp does not silently replace the current occupant.
+
+The route uses `BEGIN IMMEDIATE` to keep its checks and update in one write transaction. This prevents another writer from taking the position between the availability check and the update.
+
+### Uninstalling a lamp
+
+The endpoint is:
+
+```text
+DELETE /lamps/:id/position
+```
+
+Example:
+
+```bash
+curl -i -X DELETE http://127.0.0.1:3000/lamps/1/position
+```
+
+This removes the installation relationship, not the lamp.
+
+The database update is:
+
+```sql
+UPDATE lamps
+SET position = NULL
+WHERE id = ?;
+```
+
+The lamp keeps its ID, serial number, and name. Historical rows in light_sessions remain unchanged.
+
+An already-uninstalled lamp returns success again.
+
+Once heartbeat handling was added, uninstalling also required the lamp to be off: more than 1,000 milliseconds must have passed since its last heartbeat. A lamp that has never sent a heartbeat can be uninstalled immediately.
+
+The activity check and removal run in one transaction.
+
+### Keeping replacement simple
+
+For this PoC, replacement uses the existing operations:
+
+1. Stop the old lamp's heartbeats.
+2. Wait more than one second.
+3. Uninstall the old lamp.
+4. Install the selected lamp.
+
+There is no separate replacement endpoint or replacement-history table.
+
+### Manual checks
+
+The following operations worked as expected:
+
+| Operation | Result |
+| --- | --- |
+| Install A again at its existing living_room position | HTTP 200 |
+| Register lamp 4 | HTTP 201, with position null |
+| Install lamp 4 while A still occupies living_room | HTTP 409 |
+| Uninstall A | HTTP 200, with position null |
+| Uninstall A again | HTTP 200 |
+| Install lamp 4 in the now-empty living_room | HTTP 200 |
+
+Afterward, A was uninstalled, lamp 4 occupied living_room, and B and C remained in bedroom and bathroom.
+
+## 23. Receiving heartbeats and recording lighting activity
+
+I added:
+
+```text
+backend/src/heartbeat-routes.ts
+```
+
+The server connects it with:
+
+```typescript
+import { createHeartbeatRouter } from './heartbeat-routes.js';
+```
+
+```typescript
+app.use(createHeartbeatRouter(database));
+```
+
+The endpoint is:
+
+```text
+POST /lamps/:id/heartbeat
+```
+
+Example:
+
+```bash
+curl -i -X POST http://127.0.0.1:3000/lamps/4/heartbeat
+```
+
+The client does not supply a timestamp or position. The backend uses its own current time and the lamp's stored installation position.
+
+### Continuing or starting a session
+
+| Condition | Action |
+| --- | --- |
+| Lamp does not exist | Return HTTP 404. |
+| Lamp is not installed | Return HTTP 409. |
+| No previous session exists | Create a session. |
+| Same position and heartbeat gap is at most 1,000 ms | Update last_seen_at in the existing session. |
+| Gap is greater than 1,000 ms, or position differs | Create a new session. |
+
+A new session starts with started_at and last_seen_at set to the same timestamp.
+
+Continuing a session changes only last_seen_at. Its starting time and historical position remain unchanged.
+
+A new session returns HTTP `201`; an updated session returns HTTP `200`.
+
+The response includes the session and a `created` boolean indicating whether a new row was inserted.
+
+The lookup and write occur in a transaction. The route also rejects a heartbeat if the server time is earlier than the previous session's last_seen_at, rather than moving the stored timestamp backwards.
+
+### What happens when a lamp switches off?
+
+The sender stops sending heartbeats.
+
+No additional row or ended_at field is needed. Once more than one second has passed without a signal, the lamp is considered off.
+
+There is no background job that writes a “closed” value into the session. The timestamp remains at the last received heartbeat.
+
+If a lamp switches off and back on within one second, its signals can remain part of the same session. This follows the chosen timeout rule.
+
+### Testing continuous signals
+
+A small Node.js script used fetch to send five heartbeats, waiting approximately 200 milliseconds between requests.
+
+It then stopped sending for 1.2 seconds and sent another heartbeat.
+
+The observed results were:
+
+| Step | Result |
+| --- | --- |
+| Earlier manual heartbeat | Created session 32 |
+| First signal in the script | Created session 33 |
+| Next four signals | Updated session 33 |
+| Signal after the 1.2-second pause | Created session 34 |
+
+During session 33, started_at stayed unchanged while last_seen_at advanced.
+
+The request spacing was slightly longer than 200 milliseconds because the script waited after each response. This was a local simulation, not a precise timer.
+
+### Checking uninstall restrictions
+
+A second script used Node.js's built-in assert module to verify:
+
+1. A heartbeat followed immediately by an uninstall request returns HTTP 409.
+2. The rejected uninstall leaves the installation unchanged.
+3. Uninstall succeeds after 1.2 seconds without signals.
+4. An uninstalled lamp's heartbeat is rejected.
+5. The lamp can be installed again.
+
+All five checks passed, and lamp 4 was restored to living_room.
+
+These scripts exercised the running backend and its real local database. They added lighting records and temporarily changed an installation.
+
+They are different from the Morse test suite, which uses independent in-memory databases.
+
+## 24. Deciding what the frontend will control
+
+The planned frontend will keep each virtual lamp's on/off switch in page memory.
+
+When the page opens, every switch starts off. Saved lamp names and installation positions are loaded through GET /lamps.
+
+| Interaction | Planned behavior |
+| --- | --- |
+| Switch on | Send a heartbeat immediately, then approximately every 200 ms. |
+| Switch off | Stop sending heartbeats. |
+| Leave or reload the page | The old page's heartbeat sender stops. |
+| Open a fresh page | Start with all switches off. |
+| Hover over an installed position | Show the lamp's name from the loaded lamp list. |
+| Rename or replace a lamp | Use the existing backend endpoints on the same page. |
+
+A separate API for querying the current on/off state is not required for this demo.
+
+The frontend switch represents what that page is doing. The backend records the signals it actually receives.
+
+Closing a page does not need a final “switch off” request. If the page disappears unexpectedly, the heartbeat timeout still applies.
+
+Switching to another browser tab is different from closing the page. Any decision to stop signals when the page becomes hidden will need explicit frontend handling.
+
+### Multiple tabs
+
+Another open tab could continue sending heartbeats even when the current page shows a lamp as off.
+
+For this PoC, the planned frontend will display:
+
+> Please use only one tab to control the lamps. Another open tab may continue sending heartbeats, even when a lamp appears off here.
+
+This is guidance for the demo, not enforcement of a single active tab.
+
+The frontend has not yet been implemented.
+
+## 25. Querying lighting sessions for the timeline
+
+I added:
+
+```text
+backend/src/light-session-routes.ts
+```
+
+The server imports and registers it:
+
+```typescript
+import { createLightSessionRouter } from './light-session-routes.js';
+```
+
+```typescript
+app.use(createLightSessionRouter(database));
+```
+
+The endpoint is:
+
+```text
+GET /light-sessions?position=bedroom&start_time=...&end_time=...
+```
+
+It accepts one position and a time range expressed as Unix milliseconds.
+
+### Reading URL parameters
+
+Unlike JSON numbers in a request body, URL query parameters arrive as strings.
+
+The route validates the strings, converts them into numbers, and checks that:
+
+- The position is valid.
+- Both timestamps are nonnegative safe integers within the supported date range.
+- start_time is earlier than end_time.
+
+Invalid input returns HTTP 400.
+
+### Finding overlapping activity
+
+A timeline must include activity that started before the requested range but continued into it.
+
+For example, a lamp on from 18:00 to 21:00 must still appear when requesting 19:00–20:00.
+
+The query uses:
+
+```sql
+WHERE position = ?
+  AND started_at < ?
+  AND last_seen_at >= ?
+ORDER BY started_at ASC, id ASC
+```
+
+The placeholders receive the position, requested end, and requested start.
+
+This selects sessions whose recorded heartbeat interval overlaps the requested range. A session beginning exactly at the requested end is excluded. A heartbeat exactly at the requested start is included.
+
+The API returns the original timestamps. The frontend can limit the visible part of a bar to the displayed timeline range without changing the stored record.
+
+Unlike the Morse API, this endpoint does not require an entire session to fit inside the range.
+
+### Preserving historical positions
+
+The query reads position directly from light_sessions.
+
+It does not use the lamp's current position to decide where old activity belongs. Uninstalling or moving a lamp therefore does not move its historical records on the timeline.
+
+last_seen_at remains the last recorded heartbeat, not an exact physical switch-off time.
+
+### Request example
+
+```bash
+NOW_MS=$(node -p 'Date.now()')
+
+curl -sG http://127.0.0.1:3000/light-sessions \
+  --data-urlencode 'position=bedroom' \
+  --data-urlencode 'start_time=0' \
+  --data-urlencode "end_time=$NOW_MS"
+```
+
+`-G` makes curl place these parameters in the URL for a GET request. `--data-urlencode` handles URL encoding.
+
+The response contains:
+
+- position
+- start_time and end_time for the requested range
+- sessions, ordered by starting time
+
+No matching records produces HTTP 200 with an empty sessions array.
+
+The route returns `Cache-Control: no-store` because incoming heartbeats may change the records between requests.
+
+It allows up to 50,000 matching sessions. A larger result returns HTTP 422 and asks for a shorter range, instead of silently returning an incomplete timeline.
+
+### Manual checks
+
+Three queries produced the expected results:
+
+| Query | Observed result |
+| --- | --- |
+| Bedroom records from timestamp zero to now | 19 sessions: six ordinary sessions and 13 HELP flashes |
+| Living room on 16 October, 19:00–20:00 in Asia/Hong_Kong | A's session beginning at 18:00 was included |
+| Bedroom between timestamps 0 and 1 | Empty sessions array |
+
+The living-room result still referred to lamp A even though A had been uninstalled. Its original timestamps were preserved.
+
+## Current checkpoint — 18 October 2026
 
 | Item | Progress |
 | --- | --- |
 | SQLite initialization | Working |
 | Health endpoint | Manually verified |
-| Three-day demo seed | Implemented |
-| Lamp registration and listing | Manually verified |
-| Lamp renaming and name validation | Manually verified |
-| Morse API with position and time-range inputs | Implemented and manually checked |
-| Morse automated tests | 10 passed |
-| Lamp installation, removal, and replacement | Not yet implemented |
-| Live heartbeat processing | Not yet implemented |
-| General lighting-session query API | Not yet implemented |
-| Dedicated production-schema tests | Not yet implemented |
-| Compiled build and production start | Not yet verified |
+| Seed using the execution computer's local timezone | Regenerated and checked through the API |
+| Lamp registration, listing, and renaming | Manually verified |
+| Installing into an empty position | Manually verified |
+| Rejecting installation into an occupied position | Manually verified |
+| Uninstalling and repeated uninstall requests | Manually verified |
+| Blocking uninstall while recently active | Verified by a live API check script |
+| Heartbeat session creation and continuation | Verified by a live API check script |
+| New session after heartbeat timeout | Verified by a live API check script |
+| Rejecting heartbeats from uninstalled lamps | Verified by a live API check script |
+| Lighting-session queries and overlapping ranges | Manually verified |
+| Morse API | Implemented; ten automated tests previously passed |
+| Automated tests for installation, heartbeat, and session queries | Still to be added |
+| Dedicated production-schema tests | Still to be added |
+| Compiled build and npm start | Not yet verified |
 | Frontend | Not yet implemented |
+| User Guide reconstruction walkthrough | Drafted; not yet tested from start to finish |
 
-The next backend stage is lamp installation, removal, and replacement, while preserving historical lighting records.
+A separate replacement endpoint and a current on/off status endpoint are not planned for this PoC. Existing installation operations and frontend switch state cover the intended interaction.
 
-For instructions on running the existing project, see the [User Guide](./UserGuide.md).
+The next verification work is to add automated tests for the new routes, especially the exact 1,000-millisecond boundary, uninstall restrictions, and query boundaries.
+
+For setup and running instructions, see the [User Guide](./UserGuide.md). 
+
+For the message-detection feature, see the [Morse Guide](./MorseGuide.md).
 

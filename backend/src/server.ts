@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { createMorseRouter } from './morse-routes.js';
 import { createLampPositionRouter } from './lamp-position-routes.js';
 import { createHeartbeatRouter } from './heartbeat-routes.js';
+import { createLightSessionRouter } from './light-session-routes.js';
 
 const app = express();
 const port = 3000;
@@ -12,13 +13,10 @@ const port = 3000;
 app.use(express.json());
 
 // URL Routers
-
-// Beating for the light sessions
 app.use(createHeartbeatRouter(database));
-// Change of the lamp position
 app.use(createLampPositionRouter(database));
-// Scan stored lighting sessions when a client requests a Morse check.
 app.use(createMorseRouter(database));
+app.use(createLightSessionRouter(database));
 
 
 // Check that the server can query the database.
