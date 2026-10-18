@@ -1,12 +1,15 @@
 import express from 'express';
 import { database } from './database.js';
 import { randomUUID } from 'node:crypto';
+import { createMorseRouter } from './morse-routes.js';
 
 const app = express();
 const port = 3000;
 
 // Parse incoming JSON request bodies.
 app.use(express.json());
+// Scan stored lighting sessions when a client requests a Morse check.
+app.use(createMorseRouter(database));
 
 // Check that the server can query the database.
 app.get('/health', (_request, response) => {

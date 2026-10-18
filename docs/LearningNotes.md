@@ -2,9 +2,9 @@
 
 ## Learning record: Setup, database initialization, and demo data
 
-**Date:** 15 October 2026  
-**Updated through:** 15 October 2026, 17:16 (UTC+08:00)  
-**Scope:** Environment setup, database initialization, the first HTTP endpoint, and a demo-data script. Lamp-management and heartbeat APIs are still to be implemented.
+**Started Date:** 15 October 2026  
+**Updated through:** 17 October 2026  
+**Scope:** Backend setup, SQLite initialization, demo data, lamp registration and naming, and the Morse-check API with ten passing automated tests.
 
 ## About these notes
 
@@ -541,21 +541,283 @@ Readers do not need to repeat npm init or install every dependency individually.
 
 A compiled build, production start, and automated-test workflow still need to be verified before they are presented as tested instructions.
 
+
+## 17. Registering, listing, and renaming lamps
+
+The backend now provides three lamp endpoints:
+
+| Method and path | Purpose |
+| --- | --- |
+| `POST /lamps` | Register a new lamp. |
+| `GET /lamps` | List registered lamps. |
+| `PATCH /lamps/:id` | Change a lamp's name. |
+
+An endpoint is a combination of an HTTP method and a URL path. Express uses that combination to decide which function handles a request.
+
+### Registering a lamp
+
+From another terminal while the server is running:
+
+```bash
+curl -i -X POST http://127.0.0.1:3000/lamps
+```
+
+- `curl` sends the request.
+- `-i` includes the HTTP response headers.
+- `-X POST` selects the POST method.
+
+The backend generates a random UUID and uses it for both the permanent serial number and the initial display name.
+
+A newly registered lamp has `position: null`, meaning it has not been installed.
+
+The database ID and UUID serve different purposes:
+
+- `id` identifies the database row.
+- `serial_number` is the lamp's permanent identity.
+- `name` is a display label that the user can change.
+
+The successful response uses HTTP `201 Created`.
+
+### Listing lamps
+
+```bash
+curl http://127.0.0.1:3000/lamps
+```
+
+This returns a JSON array of registered lamps, including their IDs, serial numbers, names, and current positions.
+
+Listing records does not change them.
+
+### Renaming a lamp
+
+This example uses lamp ID `4`. On another database, use an ID returned by `GET /lamps`.
+
+```bash
+curl -i -X PATCH http://127.0.0.1:3000/lamps/4 \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Desk lamp"}'
+```
+
+- `PATCH` requests a change to an existing lamp.
+- `Content-Type: application/json` tells the server how to interpret the body.
+- `-d` supplies the request body.
+- A backslash at the end of a line continues the command on the next line.
+
+The backend removes surrounding whitespace from a custom name and checks that the result is non-empty and no longer than 20 characters.
+
+A name exceeding the limit returns HTTP `400` with:
+
+```json
+{"error":"Name must not exceed 20 characters."}
+```
+
+The initial UUID name is a deliberate exception to this limit. It allows registration without requiring the user to choose a short name immediately.
+
+Renaming changes only the display name. The serial number remains unchanged.
+
+The current length check counts Unicode code points. Some combined symbols, including certain emoji, can count as more than one character. A future frontend should follow the same rule.
+
+## 18. Adding a Morse-code check
+
+The next feature analyzes stored lighting sessions for possible Morse-code messages.
+
+It does not add another database table or change the existing sessions.
+
+The implementation is divided into two files:
+
+| File | Responsibility |
+| --- | --- |
+| `backend/src/morse.ts` | Interpret lighting durations and gaps as possible letters and messages. |
+| `backend/src/morse-routes.ts` | Validate an HTTP request, read sessions, and return the detection result. |
+
+Keeping these responsibilities separate makes the detection logic easier to understand and test.
+
+The server connects the router with:
+
+```typescript
+import { createMorseRouter } from './morse-routes.js';
+```
+
+After JSON-body parsing is enabled, it registers the router:
+
+```typescript
+app.use(express.json());
+
+// Add the endpoints provided by the Morse router.
+app.use(createMorseRouter(database));
+```
+
+Although the source file is named `morse-routes.ts`, the import uses `.js`. This matches our NodeNext configuration and the filenames produced when TypeScript compiles the application.
+
+### Requesting a check
+
+The endpoint is:
+
+```text
+POST /morse/check
+```
+
+The request specifies one position and a time range:
+
+```json
+{
+  "position": "bedroom",
+  "start_time": 1791986326000,
+  "end_time": 1791986400000
+}
+```
+
+All API timestamps are Unix time in milliseconds, matching the database.
+
+The frontend will convert a user's selected local date and time into timestamps before sending a request. It will also format returned timestamps for display.
+
+The backend does not need to guess the user's timezone.
+
+### Understanding the response
+
+A successful detection returns:
+
+```json
+{
+  "result": [
+    {
+      "start_time": 1791986326000,
+      "end_time": 1791986400000,
+      "message": "HELP"
+    }
+  ]
+}
+```
+
+A valid request with no detected messages returns:
+
+```json
+{"result":[]}
+```
+
+No match is a normal result, not an error. Invalid input returns HTTP `400`.
+
+The detector can return individual letters, groups of letters, or messages containing spaces between words. Messages separated by a sufficiently long pause are returned as separate entries in time order.
+
+A message must fit completely within the requested range. The API does not return a fragment simply because the range cuts through a longer message.
+
+### What the returned times mean
+
+`start_time` is the first heartbeat of the detected message.
+
+`end_time` is an estimated switch-off time calculated from the final session:
+
+```text
+end_time = last_seen_at + 200 milliseconds
+```
+
+This matches the seed's simulated heartbeat timing. It is not a separate database column or an exact measurement of a real bulb's switch-off time.
+
+The detector also waits for enough final silence before returning a trailing message. Otherwise, another letter or word might still be arriving.
+
+See the [Morse Guide](./MorseGuide.md) for an introduction to the timing and the demo message.
+
+## 19. Checking the API manually
+
+With the server running, I used:
+
+```bash
+NOW_MS=$(node -p 'Date.now()')
+
+curl -s -X POST http://127.0.0.1:3000/morse/check \
+  -H 'Content-Type: application/json' \
+  -d "{\"position\":\"bedroom\",\"start_time\":0,\"end_time\":$NOW_MS}"
+```
+
+`node -p 'Date.now()'` prints the current Unix timestamp in milliseconds.
+
+`$(...)` runs that command and captures its output. The shell stores it in `NOW_MS`, then substitutes the value into the JSON request.
+
+Checking the seeded bedroom records returned `HELP`.
+
+Checking `living_room` returned an empty result array. Its normal lighting schedule did not match a message.
+
+A request whose range ended exactly when HELP began also returned an empty array, because it did not contain the message.
+
+These manual checks showed how a client can use the endpoint. Automated tests then checked the behavior more systematically.
+
+## 20. Adding automated Morse tests
+
+I saved the tests in:
+
+```text
+backend/test/morse.test.ts
+```
+
+Then, from `backend/`, I added and ran a package script:
+
+```bash
+npm pkg set 'scripts.test:morse=node --import tsx --test test/morse.test.ts'
+
+npm run test:morse
+```
+
+The script has three parts:
+
+- `node` starts Node.js.
+- `--import tsx` loads support for executing the TypeScript test file.
+- `--test` runs Node.js's test runner.
+
+Supertest sends HTTP requests to the Express application during the tests. A separate development server does not need to be running.
+
+The tests create an independent SQLite database in memory. They do not modify the real database in `backend/data/`.
+
+They also supply controlled times, allowing timing behavior to be checked without waiting for real seconds to pass.
+
+### What the ten tests check
+
+1. HELP is detected with the expected start and end times.
+2. An empty dataset returns an empty result array.
+3. Records from another position are excluded.
+4. Messages outside or cut by the requested range are excluded.
+5. Spaces between words are preserved, as in HELP ME.
+6. A long pause separates messages, which remain in time order.
+7. Ordinary long lighting is not treated as a Morse letter.
+8. Invalid input returns HTTP 400.
+9. An unfinished sentence is not returned before the final silence.
+10. Repeated checks leave all stored sessions unchanged.
+
+The test run completed with:
+
+```text
+tests 10
+pass 10
+fail 0
+cancelled 0
+skipped 0
+todo 0
+```
+
+This verifies the cases covered by this test suite. It does not mean that every future feature or every possible input has been tested.
+
+The test database uses a simplified session table. These tests do not replace tests of the actual schema's foreign keys, unique constraints, or serial-number trigger.
+
+Also, our current TypeScript configuration includes `src/`, not `test/`. Running these tests executes the test code; it does not add the test directory to `npm run typecheck`.
+
 ## Current checkpoint
 
 | Item | Progress |
 | --- | --- |
-| Node.js environment and dependencies | Installed |
-| TypeScript execution through tsx | Simple example passed |
-| Source type checking | Passed, including seed.ts |
-| SQLite initialization | Ran successfully; both table names returned |
-| Express development server | Started successfully |
-| GET /health | Returned the expected JSON through curl |
-| Dynamic three-day seed | Implemented; use npm run seed on an empty database to generate the demo |
-| Lamp management APIs | Not yet implemented |
+| SQLite initialization | Working |
+| Health endpoint | Manually verified |
+| Three-day demo seed | Implemented |
+| Lamp registration and listing | Manually verified |
+| Lamp renaming and name validation | Manually verified |
+| Morse API with position and time-range inputs | Implemented and manually checked |
+| Morse automated tests | 10 passed |
+| Lamp installation, removal, and replacement | Not yet implemented |
 | Live heartbeat processing | Not yet implemented |
-| Session query API | Not yet implemented |
-| Automated database/API tests | Not yet implemented |
-| Compiled build and npm start | Not yet verified |
+| General lighting-session query API | Not yet implemented |
+| Dedicated production-schema tests | Not yet implemented |
+| Compiled build and production start | Not yet verified |
+| Frontend | Not yet implemented |
 
-The next implementation work can begin with lamp registration and installation, followed by heartbeat handling and session queries. Future entries will explain the next implementation steps, the commands to run, and the results to expect.
+The next backend stage is lamp installation, removal, and replacement, while preserving historical lighting records.
+
+For instructions on running the existing project, see the [User Guide](./UserGuide.md).
+
