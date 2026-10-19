@@ -21,7 +21,12 @@ function isPosition(value: unknown): value is Position {
 
 // Receive the database connection from server.ts.
 // Tests can later provide their own separate database.
-export function createLampPositionRouter(database: DatabaseSync) {
+// Use the real clock normally.
+// Tests can supply a controlled clock to check exact timeout boundaries.
+export function createLampPositionRouter(
+  database: DatabaseSync,
+  clock: () => number = Date.now
+) {
   const router = Router();
 
   // Example:
@@ -151,7 +156,7 @@ export function createLampPositionRouter(database: DatabaseSync) {
     }
   });
 
-  
+
   // Remove an installation only after the lamp has stopped sending signals.
   // The lamp itself and its historical sessions remain in the database.
   router.delete('/lamps/:id/position', (request, response) => {
@@ -221,7 +226,7 @@ export function createLampPositionRouter(database: DatabaseSync) {
       // preventing its removal.
       if (
         recentSession &&
-        Date.now() - recentSession.last_seen_at <= 1_000
+        clock() - recentSession.last_seen_at <= 1_000
       ) {
         database.exec('ROLLBACK');
         transactionOpen = false;
