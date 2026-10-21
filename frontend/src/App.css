@@ -1,0 +1,173 @@
+.app-shell {
+  --collapsed-width: 5cm;
+  --panel-gap: 8px;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 420px;
+}
+
+.app-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+
+  flex-shrink: 0;
+  min-height: 60px;
+  padding: 12px 20px;
+
+  border-bottom: 1px solid #b8cde0;
+  background: #e3eef8;
+}
+
+.app-toolbar label {
+  font-size: 14px;
+}
+
+.app-toolbar select {
+  padding: 8px 12px;
+
+  border: 1px solid #b8cde0;
+  border-radius: 6px;
+
+  font: inherit;
+  color: inherit;
+  background: #f5f9fd;
+}
+
+.app-toolbar select:focus-visible {
+  outline: 3px solid #315f88;
+  outline-offset: 2px;
+}
+
+.panel-viewport {
+  /* Fill the space below the toolbar and scroll on narrow screens. */
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+}
+
+.folding-panels {
+  display: flex;
+  gap: var(--panel-gap);
+
+  width: 100%;
+  min-width: 760px;
+  height: 100%;
+
+  padding: 12px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+
+  /* Reserve the same base width for every panel. */
+  flex-basis: var(--collapsed-width);
+  flex-shrink: 0;
+  flex-grow: 0;
+  min-width: 0;
+
+  overflow: hidden;
+  border: 1px solid #b8cde0;
+  border-radius: 10px;
+  background: #f5f9fd;
+
+  /* Animate width allocation without changing panel order. */
+  transition: flex-grow 300ms ease;
+}
+
+.panel.is-open {
+  /* Open panels share the remaining space equally. */
+  flex-grow: 1;
+}
+
+.panel-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  width: 100%;
+  min-height: 72px;
+  padding: 20px;
+
+  border: 0;
+  border-bottom: 1px solid #d1e0ee;
+  color: inherit;
+  background: #e3eef8;
+
+  cursor: pointer;
+}
+
+.panel-toggle:hover {
+  background: #d2e4f4;
+}
+
+.panel-toggle:focus-visible {
+  outline: 3px solid #315f88;
+  outline-offset: -4px;
+}
+
+.panel-title {
+  white-space: nowrap;
+}
+
+.panel-action {
+  font-size: 12px;
+  font-weight: 400;
+  color: #506b85;
+  white-space: nowrap;
+}
+
+.panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.panel.is-collapsed .panel-heading {
+  flex: 1;
+}
+
+.panel.is-collapsed .panel-toggle {
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+  border-bottom: 0;
+}
+
+/* Use vertical titles for collapsed panels in both languages. */
+.panel.is-collapsed .panel-title {
+  writing-mode: vertical-rl;
+  letter-spacing: 0.1em;
+}
+
+/* Respect the user's system preference for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
+}
+
+.app-title {
+  /* Keep the project title on the left and language controls on the right. */
+  margin: 0;
+  margin-right: auto;
+
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}

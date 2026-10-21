@@ -1,0 +1,33 @@
+/* 計算寬度時，把 padding 和 border 一起算進去。 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+color: #193b5b;
+background: #dbe7f2;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  /* 瀏覽器預設有外邊距；移除後才能讓介面貼齊視窗。 */
+  margin: 0;
+  min-width: 320px;
+}
+
+/* 讓按鈕沿用頁面的字型。 */
+button {
+  font: inherit;
+}

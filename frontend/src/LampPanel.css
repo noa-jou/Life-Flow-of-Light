@@ -1,0 +1,271 @@
+/* Keep the panel heading separate from the scrollable lamp list. */
+.panel-lamps .panel-heading {
+  flex: 0 0 auto;
+}
+
+.panel-lamps.is-collapsed .panel-toggle {
+  height: auto;
+  min-height: 72px;
+  padding: 16px;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-lamps.is-collapsed .panel-title {
+  writing-mode: horizontal-tb;
+  letter-spacing: normal;
+}
+
+/* Let the inner list handle scrolling instead of the entire content area. */
+.panel-lamps .panel-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lamp-manager {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+
+  min-height: 0;
+  min-width: 0;
+
+  /* Use the same column sizes for headings and lamp rows. */
+  --lamp-columns:
+    minmax(0, 1.1fr)
+    minmax(0, 1fr)
+    minmax(0, 1.3fr);
+}
+
+.lamp-list-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 12px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+.lamp-column-headings {
+  display: grid;
+  grid-template-columns: var(--lamp-columns);
+  gap: 12px;
+
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+  flex-shrink: 0;
+  padding: 12px;
+  border: 1px solid #b8cde0;
+  border-radius: 6px;
+
+  color: #193b5b;
+  background: #e3eef8;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.lamp-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  flex-shrink: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Keep idle lamps immediately below the installed group. */
+.lamp-idle-group {
+  margin-top: 0;
+}
+
+.lamp-row {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #b8cde0;
+  border-radius: 6px;
+}
+
+.lamp-row.is-installed {
+  color: #333333;
+  background: #ffffff;
+}
+
+.lamp-row.is-idle {
+  color: #ffffff;
+  background: #3e4349;
+  border-color: #3e4349;
+}
+
+.lamp-compact-name {
+  display: block;
+
+  /* Wrap long default names rather than widening the collapsed panel. */
+  overflow-wrap: anywhere;
+}
+
+.is-expanded .lamp-row {
+  display: grid;
+  grid-template-columns: var(--lamp-columns);
+  align-items: start;
+  gap: 12px;
+
+  cursor: pointer;
+}
+
+.lamp-row.is-editing {
+  box-shadow: inset 0 0 0 2px #6b9fcb;
+}
+
+.lamp-name-cell {
+  min-width: 0;
+}
+
+.lamp-name-button {
+  width: 100%;
+  padding: 4px 0;
+
+  border: 0;
+  color: inherit;
+  background: transparent;
+
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.lamp-serial {
+  min-width: 0;
+  padding-top: 4px;
+
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.lamp-inline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Controls can wrap within their column instead of moving off-screen. */
+.lamp-manager input,
+.lamp-manager select {
+  flex: 1 1 110px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px;
+
+  border: 1px solid #b8cde0;
+  border-radius: 4px;
+
+  font: inherit;
+  color: #193b5b;
+  background: #ffffff;
+}
+
+.lamp-manager button {
+  font: inherit;
+}
+
+.lamp-manager button:not(.lamp-name-button) {
+  max-width: 100%;
+  padding: 8px 10px;
+
+  border: 1px solid #a9bfd3;
+  border-radius: 4px;
+  color: #193b5b;
+  background: #e3eef8;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.lamp-manager button:disabled,
+.lamp-manager select:disabled,
+.lamp-manager input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.lamp-manager button:focus-visible,
+.lamp-manager input:focus-visible,
+.lamp-manager select:focus-visible,
+.lamp-row:focus-visible {
+  outline: 3px solid #6b9fcb;
+  outline-offset: 2px;
+}
+
+.lamp-footer {
+  flex-shrink: 0;
+  padding: 12px;
+
+  border-top: 1px solid #d1e0ee;
+  background: #e3eef8;
+}
+
+.lamp-add-button {
+  width: 100%;
+}
+
+.lamp-message {
+  margin: 0;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.lamp-error {
+  flex-shrink: 0;
+  padding: 12px;
+
+  color: #193b5b;
+  background: #e3eef8;
+  border-bottom: 1px solid #b8cde0;
+  overflow-wrap: anywhere;
+}
+
+.lamp-error p {
+  margin: 0 0 8px;
+}
+
+/* Override the original collapsed-panel rule that expands the heading. */
+.panel.panel-lamps.is-collapsed .panel-heading {
+  flex: 0 0 auto;
+}
+
+/* Use the space below the heading for the scrollable lamp list. */
+.panel.panel-lamps .panel-content {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Start both lamp groups immediately below the panel heading. */
+.lamp-manager .lamp-list-scroll {
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+
+.lamp-manager .lamp-idle-group {
+  margin-top: 0;
+}
