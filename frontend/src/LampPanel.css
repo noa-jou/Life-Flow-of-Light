@@ -269,3 +269,32 @@
 .lamp-manager .lamp-idle-group {
   margin-top: 0;
 }
+
+/* Place the delete button before the lamp name or name editor. */
+.lamp-name-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.lamp-name-cell > .lamp-name-button,
+.lamp-name-cell > .lamp-inline-controls {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Override the general button colors for this specific action. */
+.lamp-manager .lamp-name-cell .lamp-delete-button {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+
+  border: 1px solid #777777;
+  border-radius: 4px;
+
+  color: #000000;
+  background: #ffffff;
+  font-weight: 700;
+  line-height: 1;
+}

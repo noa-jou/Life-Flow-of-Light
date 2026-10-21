@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   createLamp,
+  deleteLamp,
   getLamps,
   installLamp,
   isPosition,
@@ -212,6 +213,65 @@ export default function LampPanel({ expanded, language }: Props) {
     detail = text.activeLamp;
   }
 
+  async function confirmDelete(lamp: Lamp) {
+    // Only idle lamps can be deleted from this interface.
+    if (
+        lamp.position !== null ||
+        controlsDisabled ||
+        requestLocked.current
+    ) {
+        return;
+    }
+
+    const confirmed = window.confirm(
+        `${text.deleteQuestion}\n\n` +
+        `${text.name}: ${lamp.name}\n\n` +
+        text.deleteReminder,
+    );
+
+    if (!confirmed) return;
+
+    // Prevent other requests while deletion and refresh are in progress.
+    requestLocked.current = true;
+    setBusy(true);
+    setProblem(null);
+
+    let deleted = false;
+
+    try {
+        const status = await deleteLamp(lamp.id);
+
+        if (status !== 200) {
+        window.alert(text.deleteFailed);
+        return;
+        }
+
+        deleted = true;
+        window.alert(text.deleteSuccess);
+
+        // Reload the complete list after the successful deletion.
+        const data = await getLamps();
+
+        setLamps(data);
+        setEditor(null);
+        setReady(true);
+    } catch (error: unknown) {
+        if (deleted) {
+        // A refresh failure does not mean the deletion failed.
+        setReady(false);
+        setProblem({
+            phase: 'refresh',
+            message: errorMessage(error),
+        });
+        } else {
+        window.alert(text.deleteFailed);
+        }
+    } finally {
+        requestLocked.current = false;
+        setBusy(false);
+    }
+  }
+
   function renderLamp(lamp: Lamp) {
     const editing = editor?.id === lamp.id;
     const status =
@@ -251,6 +311,22 @@ export default function LampPanel({ expanded, language }: Props) {
         onClick={() => beginEditing(lamp)}
       >
         <div className="lamp-name-cell">
+            {lamp.position === null && (
+        <button
+            type="button"
+            className="lamp-delete-button"
+            aria-label={`${text.deleteLamp}: ${lamp.name}`}
+            title={text.deleteLamp}
+            disabled={controlsDisabled}
+            onClick={(event) => {
+            // Deleting should not also activate name editing.
+            event.stopPropagation();
+            void confirmDelete(lamp);
+            }}
+        >
+            X
+        </button>
+        )}
           {editing ? (
             <form
               className="lamp-inline-controls"

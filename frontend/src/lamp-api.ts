@@ -114,3 +114,12 @@ export function uninstallLamp(id: number): Promise<unknown> {
     method: 'DELETE',
   });
 }
+
+export async function deleteLamp(id: number): Promise<number> {
+  const response = await fetch(`/api/lamps/${id}`, {
+    method: 'DELETE',
+  });
+
+  // Return the exact status because this action requires HTTP 200.
+  return response.status;
+}

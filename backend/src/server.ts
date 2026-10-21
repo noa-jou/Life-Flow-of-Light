@@ -5,6 +5,7 @@ import { createMorseRouter } from './morse-routes.js';
 import { createLampPositionRouter } from './lamp-position-routes.js';
 import { createHeartbeatRouter } from './heartbeat-routes.js';
 import { createLightSessionRouter } from './light-session-routes.js';
+import { createLampDeleteRouter } from './lamp-delete-routes.js';
 
 const app = express();
 const port = 3000;
@@ -17,6 +18,7 @@ app.use(createHeartbeatRouter(database));
 app.use(createLampPositionRouter(database));
 app.use(createMorseRouter(database));
 app.use(createLightSessionRouter(database));
+app.use(createLampDeleteRouter(database));
 
 
 // Check that the server can query the database.
