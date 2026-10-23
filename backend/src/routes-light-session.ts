@@ -5,7 +5,7 @@ type Position = 'bedroom' | 'bathroom' | 'living_room';
 
 type LightSession = {
   id: number;
-  lamp_id: number;
+  bulb_id: number;
   position: Position;
   started_at: number;
   last_seen_at: number;
@@ -91,11 +91,11 @@ export function createLightSessionRouter(database: DatabaseSync) {
       // It also includes a session containing only one heartbeat.
       //
       // Use the historical position stored in light_sessions.
-      // Moving or uninstalling a lamp must not change past results.
+      // Moving or uninstalling a bulb must not change past results.
       const sessions = database.prepare(`
         SELECT
           id,
-          lamp_id,
+          bulb_id,
           position,
           started_at,
           last_seen_at

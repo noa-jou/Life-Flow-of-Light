@@ -1,21 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 
 import {
-  createLamp,
-  deleteLamp,
-  getLamps,
-  installLamp,
+  createBulb,
+  deleteBulb,
+  getBulbs,
+  installBulb,
   isPosition,
   positions,
-  renameLamp,
-  uninstallLamp,
-} from './lamp-api';
+  renameBulb,
+  uninstallBulb,
+} from './bulb-api';
 
-import type { Lamp, Position } from './lamp-api';
-import { lampText } from './lamp-text';
-import type { Language } from './lamp-text';
+import type { Bulb, Position } from './bulb-api';
+import { bulbText } from './bulb-text';
+import type { Language } from './bulb-text';
 
-import './LampPanel.css';
+import './BulbPanel.css';
 
 type Props = {
   expanded: boolean;
@@ -37,10 +37,10 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '';
 }
 
-export default function LampPanel({ expanded, language }: Props) {
-  const text = lampText[language];
+export default function BulbPanel({ expanded, language }: Props) {
+  const text = bulbText[language];
 
-  const [lamps, setLamps] = useState<Lamp[]>([]);
+  const [bulbs, setBulbs] = useState<Bulb[]>([]);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [busy, setBusy] = useState(true);
   const [ready, setReady] = useState(false);
@@ -52,11 +52,11 @@ export default function LampPanel({ expanded, language }: Props) {
   useEffect(() => {
     const controller = new AbortController();
 
-    getLamps(controller.signal)
+    getBulbs(controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return;
 
-        setLamps(data);
+        setBulbs(data);
         setReady(true);
       })
       .catch((error: unknown) => {
@@ -80,19 +80,19 @@ export default function LampPanel({ expanded, language }: Props) {
   }, []);
 
   // Copy before sorting so React state is never mutated in place.
-  const sortedLamps = [...lamps].sort((a, b) => {
+  const sortedBulbs = [...bulbs].sort((a, b) => {
     const groupDifference =
       Number(a.position === null) - Number(b.position === null);
 
     return groupDifference || a.id - b.id;
   });
 
-  const installed = sortedLamps.filter((lamp) => lamp.position !== null);
-  const idle = sortedLamps.filter((lamp) => lamp.position === null);
+  const installed = sortedBulbs.filter((bulb) => bulb.position !== null);
+  const idle = sortedBulbs.filter((bulb) => bulb.position === null);
 
   // Filtering preserves the English alphabetical order in positions.
   const availablePositions = positions.filter((position) => {
-    return !lamps.some((lamp) => lamp.position === position);
+    return !bulbs.some((bulb) => bulb.position === position);
   });
 
   const controlsDisabled = busy || !ready;
@@ -113,9 +113,9 @@ export default function LampPanel({ expanded, language }: Props) {
       }
 
       // Always read the complete list after a successful change.
-      const data = await getLamps();
+      const data = await getBulbs();
 
-      setLamps(data);
+      setBulbs(data);
       setReady(true);
       setEditor(null);
     } catch (error: unknown) {
@@ -131,18 +131,18 @@ export default function LampPanel({ expanded, language }: Props) {
     }
   }
 
-  function beginEditing(lamp: Lamp) {
-    if (!expanded || controlsDisabled || editor?.id === lamp.id) return;
+  function beginEditing(bulb: Bulb) {
+    if (!expanded || controlsDisabled || editor?.id === bulb.id) return;
 
     setEditor({
-      id: lamp.id,
-      name: lamp.name,
-      position: lamp.position ?? availablePositions.at(0) ?? '',
+      id: bulb.id,
+      name: bulb.name,
+      position: bulb.position ?? availablePositions.at(0) ?? '',
     });
   }
 
-  function confirmRename(lamp: Lamp) {
-    if (!editor || editor.id !== lamp.id || controlsDisabled) return;
+  function confirmRename(bulb: Bulb) {
+    if (!editor || editor.id !== bulb.id || controlsDisabled) return;
 
     const name = editor.name.trim();
 
@@ -152,30 +152,30 @@ export default function LampPanel({ expanded, language }: Props) {
       return;
     }
 
-    if (name === lamp.name) return;
+    if (name === bulb.name) return;
 
     const confirmed = window.confirm(
-      `${text.renameQuestion}\n\n${lamp.name} → ${name}`,
+      `${text.renameQuestion}\n\n${bulb.name} → ${name}`,
     );
 
     if (confirmed) {
-      void synchronize(() => renameLamp(lamp.id, name));
+      void synchronize(() => renameBulb(bulb.id, name));
     }
   }
 
-    function confirmPosition(lamp: Lamp, position: Position | '') {
+    function confirmPosition(bulb: Bulb, position: Position | '') {
     if (controlsDisabled) return;
 
-    if (lamp.position !== null) {
-        // Label the lamp name and its current installation position.
+    if (bulb.position !== null) {
+        // Label the bulb name and its current installation position.
         const confirmed = window.confirm(
         `${text.uninstallQuestion}\n\n` +
-            `${text.name}: ${lamp.name}\n` +
-            `${text.dialogPosition}: ${text.positions[lamp.position]}`,
+            `${text.name}: ${bulb.name}\n` +
+            `${text.dialogPosition}: ${text.positions[bulb.position]}`,
         );
 
         if (confirmed) {
-        void synchronize(() => uninstallLamp(lamp.id));
+        void synchronize(() => uninstallBulb(bulb.id));
         }
 
         return;
@@ -183,15 +183,15 @@ export default function LampPanel({ expanded, language }: Props) {
 
     if (position === '' || !availablePositions.includes(position)) return;
 
-    // Label the lamp name and the proposed installation position.
+    // Label the bulb name and the proposed installation position.
     const confirmed = window.confirm(
         `${text.installQuestion}\n\n` +
-        `${text.name}: ${lamp.name}\n` +
+        `${text.name}: ${bulb.name}\n` +
         `${text.dialogPosition}: ${text.positions[position]}`,
     );
 
     if (confirmed) {
-        void synchronize(() => installLamp(lamp.id, position));
+        void synchronize(() => installBulb(bulb.id, position));
     }
     }
 
@@ -201,22 +201,22 @@ export default function LampPanel({ expanded, language }: Props) {
   if (problem?.message === 'Position is already occupied.') {
     detail = text.occupied;
   } else if (
-    problem?.message === 'Lamp is already installed at another position.'
+    problem?.message === 'Bulb is already installed at another position.'
   ) {
     detail = text.alreadyInstalled;
-  } else if (problem?.message === 'Lamp not found.') {
+  } else if (problem?.message === 'Bulb not found.') {
     detail = text.missing;
   } else if (
     problem?.message ===
-    'Turn off this lamp and wait more than one second before uninstalling it.'
+    'Turn off this bulb and wait more than one second before uninstalling it.'
   ) {
-    detail = text.activeLamp;
+    detail = text.activeBulb;
   }
 
-  async function confirmDelete(lamp: Lamp) {
-    // Only idle lamps can be deleted from this interface.
+  async function confirmDelete(bulb: Bulb) {
+    // Only idle bulbs can be deleted from this interface.
     if (
-        lamp.position !== null ||
+        bulb.position !== null ||
         controlsDisabled ||
         requestLocked.current
     ) {
@@ -225,7 +225,7 @@ export default function LampPanel({ expanded, language }: Props) {
 
     const confirmed = window.confirm(
         `${text.deleteQuestion}\n\n` +
-        `${text.name}: ${lamp.name}\n\n` +
+        `${text.name}: ${bulb.name}\n\n` +
         text.deleteReminder,
     );
 
@@ -239,7 +239,7 @@ export default function LampPanel({ expanded, language }: Props) {
     let deleted = false;
 
     try {
-        const status = await deleteLamp(lamp.id);
+        const status = await deleteBulb(bulb.id);
 
         if (status !== 200) {
         window.alert(text.deleteFailed);
@@ -250,9 +250,9 @@ export default function LampPanel({ expanded, language }: Props) {
         window.alert(text.deleteSuccess);
 
         // Reload the complete list after the successful deletion.
-        const data = await getLamps();
+        const data = await getBulbs();
 
-        setLamps(data);
+        setBulbs(data);
         setEditor(null);
         setReady(true);
     } catch (error: unknown) {
@@ -272,14 +272,14 @@ export default function LampPanel({ expanded, language }: Props) {
     }
   }
 
-  function renderLamp(lamp: Lamp) {
-    const editing = editor?.id === lamp.id;
+  function renderBulb(bulb: Bulb) {
+    const editing = editor?.id === bulb.id;
     const status =
-      lamp.position === null ? text.idle : text.positions[lamp.position];
+      bulb.position === null ? text.idle : text.positions[bulb.position];
 
     // Use an empty string when no installation position is available.
     const selectedPosition =
-    lamp.position ??
+    bulb.position ??
     (editing &&
     editor.position !== '' &&
     availablePositions.includes(editor.position)
@@ -287,41 +287,41 @@ export default function LampPanel({ expanded, language }: Props) {
         : availablePositions.at(0) ?? '');
 
     const rowClass =
-      `lamp-row ${lamp.position === null ? 'is-idle' : 'is-installed'}` +
+      `bulb-row ${bulb.position === null ? 'is-idle' : 'is-installed'}` +
       (expanded && editing ? ' is-editing' : '');
 
     if (!expanded) {
       return (
         <li
-          key={lamp.id}
+          key={bulb.id}
           className={rowClass}
           title={status}
           tabIndex={0}
-          aria-label={`${lamp.name}: ${status}`}
+          aria-label={`${bulb.name}: ${status}`}
         >
-          <span className="lamp-compact-name">{lamp.name}</span>
+          <span className="bulb-compact-name">{bulb.name}</span>
         </li>
       );
     }
 
     return (
       <li
-        key={lamp.id}
+        key={bulb.id}
         className={rowClass}
-        onClick={() => beginEditing(lamp)}
+        onClick={() => beginEditing(bulb)}
       >
-        <div className="lamp-name-cell">
-            {lamp.position === null && (
+        <div className="bulb-name-cell">
+            {bulb.position === null && (
         <button
             type="button"
-            className="lamp-delete-button"
-            aria-label={`${text.deleteLamp}: ${lamp.name}`}
-            title={text.deleteLamp}
+            className="bulb-delete-button"
+            aria-label={`${text.deleteBulb}: ${bulb.name}`}
+            title={text.deleteBulb}
             disabled={controlsDisabled}
             onClick={(event) => {
             // Deleting should not also activate name editing.
             event.stopPropagation();
-            void confirmDelete(lamp);
+            void confirmDelete(bulb);
             }}
         >
             X
@@ -329,10 +329,10 @@ export default function LampPanel({ expanded, language }: Props) {
         )}
           {editing ? (
             <form
-              className="lamp-inline-controls"
+              className="bulb-inline-controls"
               onSubmit={(event) => {
                 event.preventDefault();
-                confirmRename(lamp);
+                confirmRename(bulb);
               }}
             >
               <input
@@ -351,7 +351,7 @@ export default function LampPanel({ expanded, language }: Props) {
               <button
                 type="submit"
                 disabled={
-                  controlsDisabled || editor.name.trim() === lamp.name
+                  controlsDisabled || editor.name.trim() === bulb.name
                 }
               >
                 {text.confirmChange}
@@ -360,26 +360,26 @@ export default function LampPanel({ expanded, language }: Props) {
           ) : (
             <button
               type="button"
-              className="lamp-name-button"
+              className="bulb-name-button"
               disabled={controlsDisabled}
-              onClick={() => beginEditing(lamp)}
+              onClick={() => beginEditing(bulb)}
             >
-              {lamp.name}
+              {bulb.name}
             </button>
           )}
         </div>
 
-        <code className="lamp-serial" aria-label={text.serial}>
-          {lamp.serial_number}
+        <code className="bulb-serial" aria-label={text.serial}>
+          {bulb.serial_number}
         </code>
 
-        <div className="lamp-inline-controls">
+        <div className="bulb-inline-controls">
         <select
-            aria-label={`${text.position}: ${lamp.name}`}
+            aria-label={`${text.position}: ${bulb.name}`}
             value={selectedPosition}
             disabled={
             controlsDisabled ||
-            lamp.position !== null ||
+            bulb.position !== null ||
             availablePositions.length === 0
             }
             onChange={(event) => {
@@ -390,15 +390,15 @@ export default function LampPanel({ expanded, language }: Props) {
             // Selecting a position also selects this row for editing.
             // Preserve the name draft if this row is already being edited.
             setEditor((current) => ({
-                id: lamp.id,
-                name: current?.id === lamp.id ? current.name : lamp.name,
+                id: bulb.id,
+                name: current?.id === bulb.id ? current.name : bulb.name,
                 position,
             }));
             }}
         >
-            {lamp.position !== null ? (
-            <option value={lamp.position}>
-                {text.positions[lamp.position]}
+            {bulb.position !== null ? (
+            <option value={bulb.position}>
+                {text.positions[bulb.position]}
             </option>
             ) : availablePositions.length === 0 ? (
             <option value="">{text.noPositions}</option>
@@ -416,15 +416,15 @@ export default function LampPanel({ expanded, language }: Props) {
             type="button"
             disabled={
             controlsDisabled ||
-            (lamp.position === null && selectedPosition === '')
+            (bulb.position === null && selectedPosition === '')
             }
             onClick={(event) => {
             // Do not also trigger the row's name-editing action.
             event.stopPropagation();
-            confirmPosition(lamp, selectedPosition);
+            confirmPosition(bulb, selectedPosition);
             }}
         >
-            {lamp.position === null ? text.confirm : text.uninstall}
+            {bulb.position === null ? text.confirm : text.uninstall}
         </button>
         </div>
       </li>
@@ -433,17 +433,17 @@ export default function LampPanel({ expanded, language }: Props) {
 
   return (
     <div
-      className={`lamp-manager ${expanded ? 'is-expanded' : 'is-compact'}`}
+      className={`bulb-manager ${expanded ? 'is-expanded' : 'is-compact'}`}
       aria-busy={busy}
     >
       {busy && (
-        <p className="lamp-message" role="status">
+        <p className="bulb-message" role="status">
           {ready ? text.saving : text.loading}
         </p>
       )}
 
       {problem && (
-        <div className="lamp-error" role="alert">
+        <div className="bulb-error" role="alert">
           <p>
             {problem.phase === 'refresh'
               ? text.refreshFailed
@@ -464,38 +464,38 @@ export default function LampPanel({ expanded, language }: Props) {
         </div>
       )}
 
-      <div className="lamp-list-scroll">
+      <div className="bulb-list-scroll">
         {expanded && (
-          <div className="lamp-column-headings">
+          <div className="bulb-column-headings">
             <span>{text.name}</span>
             <span>{text.serial}</span>
             <span>{text.position}</span>
           </div>
         )}
-        {ready && lamps.length === 0 && (
-          <p className="lamp-message">{text.empty}</p>
+        {ready && bulbs.length === 0 && (
+          <p className="bulb-message">{text.empty}</p>
         )}
 
         {installed.length > 0 && (
-          <ul className="lamp-group">
-            {installed.map(renderLamp)}
+          <ul className="bulb-group">
+            {installed.map(renderBulb)}
           </ul>
         )}
 
         {idle.length > 0 && (
-          <ul className="lamp-group lamp-idle-group">
-            {idle.map(renderLamp)}
+          <ul className="bulb-group bulb-idle-group">
+            {idle.map(renderBulb)}
           </ul>
         )}
       </div>
 
       {expanded && (
-        <footer className="lamp-footer">
+        <footer className="bulb-footer">
           <button
             type="button"
-            className="lamp-add-button"
+            className="bulb-add-button"
             disabled={controlsDisabled}
-            onClick={() => void synchronize(createLamp)}
+            onClick={() => void synchronize(createBulb)}
           >
             {text.add}
           </button>

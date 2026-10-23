@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import './App.css';
-import LampPanel from './LampPanel';
+import BulbPanel from './BulbPanel';
 
 type PanelId = 1 | 2 | 3;
 type Layout = '1' | '2' | '3' | '12' | '13' | '23';
@@ -14,7 +14,7 @@ const translations = {
     expand: 'Expand',
     collapse: 'Collapse',
     panels: {
-      1: 'Lamps',
+      1: 'Bulbs',
       2: 'House',
       3: 'History',
     },
@@ -59,7 +59,7 @@ const transitions: Record<Layout, Record<PanelId, Layout>> = {
   },
   '13': {
     1: '3',
-    2: '23', // Opening House closes Lamps.
+    2: '23', // Opening House closes Bulbs.
     3: '1',
   },
   '23': {
@@ -135,7 +135,7 @@ export default function App() {
               <section
                 key={panelId}
                 className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${
-                  panelId === 1 ? 'panel-lamps' : ''
+                  panelId === 1 ? 'panel-Bulbs' : ''
                 }`}
                 aria-labelledby={titleId}
               >
@@ -164,7 +164,7 @@ export default function App() {
                   hidden={!isOpen && panelId !== 1}
                 >
                   {panelId === 1 && (
-                    <LampPanel expanded={isOpen} language={language} />
+                    <BulbPanel expanded={isOpen} language={language} />
                   )}
                 </div>
               </section>

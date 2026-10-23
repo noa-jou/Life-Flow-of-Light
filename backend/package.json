@@ -3,14 +3,17 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "node --import tsx --test test/*.test.ts",
+    "test": "npm run typecheck:tests && node --import tsx --test test/*.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "start": "node dist/server.js",
     "seed": "tsx src/seed.ts",
-    "test:morse": "node --import tsx --test test/morse.test.ts",
-    "test:backend": "node --import tsx --test test/backend.test.ts"
+    "test:morse": "node --import tsx --test test/morse.test.ts test/morse-routes.test.ts",
+    "typecheck:tests": "tsc --project test/tsconfig.json",
+    "test:bulbs": "node --import tsx --test test/bulb-routes.test.ts",
+    "test:heartbeat": "node --import tsx --test test/heartbeat-routes.test.ts",
+    "test:timeline": "node --import tsx --test test/light-session-routes.test.ts"
   },
   "keywords": [],
   "author": "",

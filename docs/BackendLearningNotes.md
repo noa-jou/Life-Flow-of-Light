@@ -3,7 +3,7 @@
 [Project overview](../README.md) · [User Guide](./UserGuide.md) · [Morse Guide](./MorseGuide.md)
 
 **Started:** 15 October 2026  
-**Updated through:** 19 October 2026  
+**Updated through:** 23 October 2026
 **Checkpoint:** The backend is ready for local PoC use and frontend integration. All 22 automated tests passed, the TypeScript build succeeded, and the compiled server started and answered its health check.
 
 ## About these notes
@@ -2661,3 +2661,669 @@ Keep database backups separately, because ignored local data is not preserved by
 
 I can now return to a working backend, rerun its checks, and use these notes to understand the choices behind it without assuming that I remember every step.
 
+---
+
+## 33. Using “bulb” consistently — 23 October 2026
+
+We now use **bulb** to mean the individual light bulb in this project.
+
+Earlier sections use the word **lamp**. Those sections describe the earlier version. When following their commands with the current backend, use the new names below.
+
+| Earlier name | Current name |
+| --- | --- |
+| `lamps` database table | `bulbs` |
+| `lamp_id` session column | `bulb_id` |
+| `/lamps` API path | `/bulbs` |
+| `Lamp` TypeScript type | `Bulb` |
+
+For example:
+
+```bash
+curl http://127.0.0.1:3000/bulbs
+```
+
+The change also applies to longer API paths:
+
+```text
+PUT /bulbs/:id/position
+DELETE /bulbs/:id/position
+POST /bulbs/:id/heartbeat
+```
+
+The names `light_sessions` and `/light-sessions` stay the same. They describe periods of lighting activity.
+
+Changing a word in TypeScript does not rename an existing database table. The SQL schema and the database must agree with the code.
+
+For this development reset, I chose not to keep the old records. I deleted the old database and used the updated schema to create a new one through the seed command.
+
+This was a fresh start, not a migration of old records.
+
+## 34. Keeping bulb management APIs together
+
+The bulb management endpoints now live together in:
+
+```text
+backend/src/routes-bulb.ts
+```
+
+This file contains six endpoints:
+
+| Method and path | Purpose |
+| --- | --- |
+| `POST /bulbs` | Register a bulb. |
+| `GET /bulbs` | List registered bulbs. |
+| `PATCH /bulbs/:id` | Change a bulb’s name. |
+| `PUT /bulbs/:id/position` | Install a bulb. |
+| `DELETE /bulbs/:id/position` | Uninstall a bulb. |
+| `DELETE /bulbs/:id` | Delete an unused bulb. |
+
+A **router** is a group of request handlers.
+
+Each handler answers one kind of request. For example, the handler for `GET /bulbs` reads the database and returns the bulb list.
+
+The file exports this function:
+
+```ts
+export function createBulbRouter(
+  database: DatabaseSync,
+  clock: () => number = Date.now
+) {
+  const router = Router();
+
+  // Register the bulb endpoints here.
+
+  return router;
+}
+```
+
+Calling the function creates the router. It receives the database connection it should use.
+
+`server.ts` connects that router to the application:
+
+```ts
+import { createBulbRouter } from './routes-bulb.js';
+
+app.use(createBulbRouter(database));
+```
+
+The exported name and the imported name must match exactly.
+
+One `app.use` is enough here because all six handlers belong to the returned router.
+
+The UUID generator is now imported in `routes-bulb.ts`, where registration happens:
+
+```ts
+import { randomUUID } from 'node:crypto';
+```
+
+It is no longer needed in `server.ts`.
+
+The main jobs of `server.ts` are now easier to see:
+
+1. Create the Express application.
+2. Enable JSON request parsing.
+3. Register the routers.
+4. Provide the health endpoint.
+5. Start listening for requests.
+
+Heartbeat, timeline, and Morse endpoints remain in their own files.
+
+## 35. Deleting an unused bulb
+
+Deleting a bulb and uninstalling a bulb are different actions.
+
+**Uninstalling** sets its current position to `NULL`. The bulb still exists and can be installed again.
+
+**Deleting** removes its row from the `bulbs` table.
+
+The delete endpoint is:
+
+```text
+DELETE /bulbs/:id
+```
+
+Its rules are:
+
+| Situation | Result |
+| --- | --- |
+| Uninstalled, with no lighting history | Delete it and return `200`. |
+| Still installed | Return `409`. |
+| Uninstalled, but has lighting history | Return `409`. |
+| Bulb does not exist | Return `404`. |
+| Invalid ID | Return `400`. |
+
+A successful response looks like this:
+
+```json
+{
+  "deleted": true,
+  "id": 4
+}
+```
+
+The endpoint does not delete historical sessions.
+
+A session contains a `bulb_id` that refers to a bulb. Keeping that bulb preserves the connection between the identity and its history.
+
+The database foreign key also protects this connection:
+
+```sql
+FOREIGN KEY (bulb_id) REFERENCES bulbs(id)
+    ON DELETE RESTRICT
+```
+
+The API checks the rules first so it can return a clear response. The database constraint provides another layer of protection.
+
+The checks and deletion happen inside one transaction. Another database writer cannot install the bulb between the check and the deletion.
+
+## 36. Rebuilding and checking the demo
+
+After removing the old database, I ran these commands from `backend/`:
+
+```bash
+npm run typecheck
+npm run seed
+npm run dev
+```
+
+The seed imports `database.ts`. That module opens a database file and applies `schema.sql`, so a separate manual database-creation command is not needed.
+
+The seed creates:
+
+- Three bulbs: A, B, and C.
+- Thirty-one lighting sessions.
+- Three complete local calendar days before the execution date.
+- A HELP pattern in the bedroom on the third evening.
+
+The seed uses the timezone of the computer running it. It does not force every user to use my timezone.
+
+The database still stores **Unix timestamps in milliseconds**.
+
+In another terminal, I checked the bulbs:
+
+```bash
+curl -sS http://127.0.0.1:3000/bulbs \
+  | python3 -m json.tool
+```
+
+The response showed:
+
+| Bulb | Position |
+| --- | --- |
+| A | `living_room` |
+| B | `bedroom` |
+| C | `bathroom` |
+
+I also checked the Morse endpoint:
+
+```bash
+NOW_MS=$(node -p 'Date.now()')
+
+curl -sS -X POST http://127.0.0.1:3000/morse/check \
+  -H 'Content-Type: application/json' \
+  -d "{\"position\":\"bedroom\",\"start_time\":0,\"end_time\":$NOW_MS}" \
+  | python3 -m json.tool
+```
+
+It returned a message containing:
+
+```json
+"message": "HELP"
+```
+
+These manual checks confirmed that the new database, bulb listing, seed, and Morse query worked together on my computer.
+
+Moving routes between source files does not require another database reset.
+
+## 37. Organizing tests by responsibility
+
+The previous test folder had two main files:
+
+```text
+backend.test.ts
+morse.test.ts
+```
+
+As the backend grew, the first file covered several different areas. It became harder to tell where a new test belonged.
+
+We replaced that arrangement with smaller files.
+
+| File in `backend/test/` | What it checks |
+| --- | --- |
+| `schema.test.ts` | Database rules. |
+| `bulb-routes.test.ts` | The six bulb management endpoints. |
+| `heartbeat-routes.test.ts` | Heartbeat requests and session timing. |
+| `light-session-routes.test.ts` | Timeline queries. |
+| `morse-routes.test.ts` | The Morse HTTP endpoint. |
+| `morse.test.ts` | The Morse decoder itself. |
+| `integration.test.ts` | A workflow using several routers together. |
+| `seed.test.ts` | Demo generation and protection against overwriting data. |
+| `server.test.ts` | API registration in the real server. |
+
+There are also three support files:
+
+| File | Purpose |
+| --- | --- |
+| `helpers.ts` | Shared tools for preparing tests. |
+| `project-helper.ts` | A temporary project for seed and server tests. |
+| `tsconfig.json` | Type-checking settings for test code. |
+
+The old `backend.test.ts` is removed. Its useful checks are carried into the new files.
+
+The new `morse.test.ts` replaces the old version. HTTP-related Morse checks now belong in `morse-routes.test.ts`.
+
+The command still runs everything together:
+
+```bash
+npm test
+```
+
+Splitting files changes how we organize the tests. It does not mean we must run every file by hand.
+
+## 38. Understanding the helper files
+
+A **helper** is a small function that does a repeated task for other code.
+
+For example, many tests need an empty database. Instead of copying the database setup into every file, they call:
+
+```ts
+const db = databaseFor(t);
+```
+
+### `helpers.ts`: preparing small test environments
+
+This file provides the following tools:
+
+| Helper | Simple explanation |
+| --- | --- |
+| `databaseFor(t)` | Create an empty database using the real schema. |
+| `apiFor(router)` | Create a small Express app for testing one router. |
+| `addBulb(...)` | Insert a bulb needed by a test. |
+| `addSession(...)` | Insert a known lighting record. |
+| `snapshot(db)` | Read both tables so a test can compare before and after. |
+| `addMorse(...)` | Insert pulses for a known Morse pattern. |
+| `addManySessions(...)` | Insert enough records to check query limits. |
+
+Most tests use:
+
+```ts
+new DatabaseSync(':memory:')
+```
+
+This database exists in memory. It is not the database in `backend/data`.
+
+Each test gets its own database, so one test does not depend on records left by another test.
+
+The helper also arranges for the connection to close after the test.
+
+### Test data is not a test result
+
+A **fixture** is data prepared for a test.
+
+For example:
+
+```ts
+addBulb(db, 1, 'bedroom');
+```
+
+This prepares a bulb for a heartbeat test. It does not prove that `POST /bulbs` works, because it inserts directly into SQLite.
+
+To test registration, we must send an actual request:
+
+```ts
+await api.post('/bulbs').expect(201);
+```
+
+This distinction helps us understand what each test proves.
+
+### Comparing before and after
+
+A snapshot lets us check that a rejected request changed nothing:
+
+```ts
+const before = snapshot(db);
+
+// Send a request that should be rejected.
+
+assert.deepEqual(snapshot(db), before);
+```
+
+Checking the status code alone would not catch a bug where the API returns `409` but has already changed the database.
+
+### `project-helper.ts`: testing code that opens database files
+
+`seed.ts` and `server.ts` import `database.ts`.
+
+If a test imported them directly from the normal project, they could open the saved development database.
+
+The project helper avoids this by creating a temporary copy containing:
+
+- The source files.
+- The SQL schema.
+- A small package configuration.
+- A link to the already installed packages.
+
+It starts a separate Node.js process in that temporary directory.
+
+That process creates its own database. The helper removes the temporary project after the test.
+
+It does not download packages again or copy the development database.
+
+## 39. Understanding the different kinds of tests
+
+A test usually has three steps:
+
+1. Prepare a known situation.
+2. Perform an action.
+3. Check the result.
+
+An **assertion** is the check in step three.
+
+For example:
+
+```ts
+assert.equal(response.body.position, null);
+```
+
+This means: “The returned position must be `null`.”
+
+If the result is different, the test fails.
+
+### Database tests
+
+`schema.test.ts` sends SQL directly to SQLite.
+
+It checks rules such as:
+
+- Two installed bulbs cannot occupy the same position.
+- Serial numbers must be unique.
+- A serial number cannot change.
+- A session must refer to an existing bulb.
+- A bulb with history cannot be deleted.
+- A session cannot end its recorded activity before it starts.
+
+These checks test the database’s protection, even without Express.
+
+### Router tests
+
+Files ending in `-routes.test.ts` send HTTP requests through Supertest.
+
+Supertest helps us call an Express app from a test. We do not need to start `npm run dev` first.
+
+For example:
+
+```ts
+await api.delete('/bulbs/1').expect(409);
+```
+
+This checks that the request receives HTTP `409`.
+
+The test can also inspect the response body and database records.
+
+### Decoder tests
+
+`morse.test.ts` calls `detectMorse()` directly.
+
+There is no database or HTTP request in these tests.
+
+This makes it easier to check small details:
+
+- All letters from A to Z.
+- Dot and dash duration limits.
+- Gaps between signals, letters, and words.
+- Unknown patterns.
+- Overlapping records.
+- Different bulb identities.
+- Whether the decoder leaves its input unchanged.
+
+Separating these tests helps locate a problem.
+
+For example, if the decoder tests pass but the Morse API tests fail, the problem may be in input validation, SQL queries, or how the API calls the decoder.
+
+### Integration tests
+
+An integration test checks several parts working together.
+
+Our `integration.test.ts` follows this workflow:
+
+1. Register a bulb.
+2. Install it in the bedroom.
+3. Send a heartbeat.
+4. Move time forward until it is off.
+5. Uninstall and reinstall it.
+6. Send another heartbeat.
+7. Move it to the bathroom.
+8. Check that the old bedroom records still exist.
+
+This checks the connections between features.
+
+### Seed tests
+
+The seed tests use a fixed date inside a separate test process.
+
+One case crosses a year boundary. Another crosses a daylight-saving change in New York.
+
+They check that the seed produces the previous three local dates, with the expected lighting times and HELP message.
+
+They also run the seed again and confirm that existing records are preserved.
+
+The fixed test dates do not change the real seed. Normal use still follows the actual execution date.
+
+### Server registration tests
+
+Router tests can pass even if `server.ts` forgets to register a router.
+
+`server.test.ts` imports the real server in the temporary project and calls every API group.
+
+For this test only, it uses a free port chosen by the operating system. It does not take over port 3000.
+
+This test checks source startup and route registration. We still run `npm run build` to check compilation separately.
+
+## 40. Adding checks that were missing
+
+The expanded tests cover more than the earlier suite.
+
+### Bulb management
+
+We now check:
+
+- Registration creates a UUID and uses it as the default name.
+- New bulbs are uninstalled.
+- Listing includes installed and uninstalled bulbs.
+- Renaming trims surrounding spaces.
+- Twenty code points are accepted; twenty-one are rejected.
+- Renaming changes no serial number, position, or history.
+- Deletion removes only an uninstalled bulb without history.
+- A rejected deletion preserves all records.
+
+The name tests include English, Chinese, and simple emoji.
+
+The current rule counts Unicode **code points**. A complex emoji can contain more than one code point, even if it looks like one symbol on screen.
+
+### Timing boundaries
+
+We check values exactly at the boundary and just beyond it.
+
+For heartbeat handling:
+
+| Gap since the last heartbeat | Expected behavior |
+| --- | --- |
+| 1,000 ms | Continue the session. |
+| 1,001 ms | Create a new session. |
+
+For the final silence after a Morse message:
+
+| Silence after estimated switch-off | Expected behavior |
+| --- | --- |
+| 17,500 ms | Keep waiting. |
+| 17,501 ms | Return the completed message. |
+
+Tests control the clock directly. They do not spend real time waiting for these intervals.
+
+### Query limits
+
+The timeline and Morse APIs have a limit of 50,000 matching or scanned sessions.
+
+We check both sides:
+
+- 50,000 records: the query is allowed.
+- 50,001 records: return `422`.
+
+This protects against a response that silently leaves out part of the requested data.
+
+### Morse tests use the real schema
+
+The Morse API tests now create the real tables from `schema.sql`.
+
+They register a fixture bulb before inserting its sessions, so the foreign key is active during the tests.
+
+The separate decoder tests can still supply unusual or invalid records directly to check how the decoder handles them.
+
+## 41. Checking test code and running the suite
+
+TypeScript checks and automated tests answer different questions.
+
+**TypeScript checking** can find problems such as an unknown function name or a wrong argument type.
+
+**Running tests** checks behavior, such as whether a request returns `409` and leaves the data unchanged.
+
+We need both.
+
+### Type-checking the tests
+
+The main TypeScript configuration originally focused on `src`.
+
+We added:
+
+```text
+backend/test/tsconfig.json
+```
+
+It includes both application source and test files.
+
+Its `noEmit` setting means:
+
+> Check the code, but do not create JavaScript output files.
+
+This helps catch mistakes inside tests before running them.
+
+### Updating npm scripts
+
+From `backend/`:
+
+```bash
+npm pkg set 'scripts.typecheck:tests=tsc --project test/tsconfig.json'
+
+npm pkg set 'scripts.test=npm run typecheck:tests && node --import tsx --test test/*.test.ts'
+
+npm pkg delete scripts.test:backend
+
+npm pkg set 'scripts.test:bulbs=node --import tsx --test test/bulb-routes.test.ts'
+
+npm pkg set 'scripts.test:heartbeat=node --import tsx --test test/heartbeat-routes.test.ts'
+
+npm pkg set 'scripts.test:timeline=node --import tsx --test test/light-session-routes.test.ts'
+
+npm pkg set 'scripts.test:morse=node --import tsx --test test/morse.test.ts test/morse-routes.test.ts'
+```
+
+These commands update `package.json`. They do not install new packages.
+
+The old `test:backend` shortcut is removed because `backend.test.ts` no longer exists.
+
+### Running everything
+
+```bash
+npm test
+```
+
+The command first checks the TypeScript code.
+
+The `&&` means the tests run only if that check succeeds.
+
+Then:
+
+```text
+node --import tsx --test test/*.test.ts
+```
+
+means:
+
+- `node`: run Node.js.
+- `--import tsx`: enable running the TypeScript files.
+- `--test`: use Node’s test runner.
+- `test/*.test.ts`: select all files in `test` whose names end with `.test.ts`.
+
+The helper files do not match that filename pattern. They are loaded when a test imports them.
+
+### Running one area
+
+```bash
+npm run test:bulbs
+npm run test:heartbeat
+npm run test:timeline
+npm run test:morse
+```
+
+These shortcuts run their selected tests. They do not run the separate type-checking step.
+
+To check all test types:
+
+```bash
+npm run typecheck:tests
+```
+
+To run a file without a shortcut:
+
+```bash
+node --import tsx --test test/seed.test.ts
+```
+
+### Understanding the result
+
+The replacement suite contains 41 top-level tests.
+
+Some tests check several examples, such as all 26 letters or several invalid IDs. Therefore, 41 is not the total number of individual assertions.
+
+The expected summary is:
+
+```text
+ℹ tests 41
+ℹ pass 41
+ℹ fail 0
+```
+
+A passing suite means the checked examples behaved as expected. It does not prove that every possible input or future change is safe.
+
+## 42. Checkpoint — 23 October 2026
+
+The backend now uses `bulb` consistently in its current source, database schema, and bulb API paths.
+
+Bulb management endpoints are grouped in `routes-bulb.ts`. The server registers them through `createBulbRouter`.
+
+I manually confirmed that:
+
+- `GET /bulbs` returns A, B, and C at the expected positions.
+- The Morse endpoint finds HELP in the regenerated bedroom records.
+
+The replacement test suite was prepared and checked by the AI assistant against the supplied backend source:
+
+- Test TypeScript checking passed.
+- All 41 tests passed.
+
+At the time of this note, I had not yet recorded my own terminal result for the complete replacement suite.
+
+After creating the files on my computer, the next checks are:
+
+```bash
+cd ~/Life-Flow-of-Light/backend
+
+npm test
+npm run build
+```
+
+The automated tests use memory databases or temporary project databases. The manual `curl` commands use the running backend and its saved database.
+
+No new seed run is needed just because the test folder changed.
+
+I do not need to understand every helper immediately. When maintaining one feature, I can start with its matching test file, read the test names, and follow the prepared situation, action, and expected result.

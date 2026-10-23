@@ -6,17 +6,17 @@ PRAGMA foreign_keys = ON;
 BEGIN TRANSACTION;
 
 
--- Store each registered lamp.
--- Removing a lamp from a position does not delete this row.
-CREATE TABLE IF NOT EXISTS lamps (
+-- Store each registered bulb.
+-- Removing a bulb from a position does not delete this row.
+CREATE TABLE IF NOT EXISTS bulbs (
 
     -- Internal database ID.
     id INTEGER PRIMARY KEY,
 
-    -- Permanent lamp identity.
-    -- The backend generates a random serial number when registering a lamp.
+    -- Permanent bulb identity.
+    -- The backend generates a random serial number when registering a bulb.
     -- NOT NULL: a serial number is required.
-    -- UNIQUE: two lamps cannot have the same serial number.
+    -- UNIQUE: two bulbs cannot have the same serial number.
     serial_number TEXT NOT NULL UNIQUE,
 
     -- Display name chosen by the user.
@@ -24,11 +24,11 @@ CREATE TABLE IF NOT EXISTS lamps (
     name TEXT NOT NULL,
 
     -- Current installation position.
-    -- NULL means the lamp is registered but not installed.
+    -- NULL means the bulb is registered but not installed.
     --
-    -- UNIQUE allows only one lamp at each position.
+    -- UNIQUE allows only one bulb at each position.
     -- SQLite allows multiple rows with NULL here,
-    -- so multiple lamps can remain uninstalled.
+    -- so multiple bulbs can remain uninstalled.
     position TEXT UNIQUE
         CHECK (
             position IS NULL
@@ -43,12 +43,12 @@ CREATE TABLE IF NOT EXISTS light_sessions (
     -- Internal ID of this lighting session.
     id INTEGER PRIMARY KEY,
 
-    -- ID of the lamp that sent the heartbeat.
-    lamp_id INTEGER NOT NULL,
+    -- ID of the bulb that sent the heartbeat.
+    bulb_id INTEGER NOT NULL,
 
-    -- Copy the lamp's position when this session starts.
-    -- This value stays unchanged if the lamp is moved later.
-    -- An uninstalled lamp cannot start a session.
+    -- Copy the bulb's position when this session starts.
+    -- This value stays unchanged if the bulb is moved later.
+    -- An uninstalled bulb cannot start a session.
     position TEXT NOT NULL
         CHECK (
             position IN ('bedroom', 'bathroom', 'living_room')
@@ -63,10 +63,10 @@ CREATE TABLE IF NOT EXISTS light_sessions (
     -- Store Unix time in milliseconds.
     last_seen_at INTEGER NOT NULL,
 
-    -- Every session must refer to an existing lamp.
-    -- Prevent deleting a lamp that has session records.
-    -- Uninstalling a lamp should set lamps.position to NULL instead.
-    FOREIGN KEY (lamp_id) REFERENCES lamps(id)
+    -- Every session must refer to an existing bulb.
+    -- Prevent deleting a bulb that has session records.
+    -- Uninstalling a bulb should set bulbs.position to NULL instead.
+    FOREIGN KEY (bulb_id) REFERENCES bulbs(id)
         ON DELETE RESTRICT,
 
     -- Reject negative start times.
@@ -82,13 +82,13 @@ CREATE INDEX IF NOT EXISTS idx_light_sessions_position_time
     ON light_sessions (position, started_at DESC);
 
 
--- Reject any attempt to change a registered lamp's serial number.
+-- Reject any attempt to change a registered bulb's serial number.
 -- Changing its name or position is still allowed.
-CREATE TRIGGER IF NOT EXISTS prevent_lamp_serial_number_change
-BEFORE UPDATE OF serial_number ON lamps
+CREATE TRIGGER IF NOT EXISTS prevent_bulb_serial_number_change
+BEFORE UPDATE OF serial_number ON bulbs
 WHEN NEW.serial_number IS NOT OLD.serial_number
 BEGIN
-    SELECT RAISE(ABORT, 'Lamp serial number cannot be changed');
+    SELECT RAISE(ABORT, 'Bulb serial number cannot be changed');
 END;
 
 

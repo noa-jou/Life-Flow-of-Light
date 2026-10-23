@@ -98,7 +98,7 @@ export function createMorseRouter(
 
     try {
       // Search the position saved in each historical session.
-      // A lamp's current position may have changed since then.
+      // A bulb's current position may have changed since then.
       //
       // Keep complete session times. Do not cut the durations
       // to fit the requested range.
@@ -107,7 +107,7 @@ export function createMorseRouter(
       const rows = database.prepare(`
         SELECT
           id,
-          lamp_id,
+          bulb_id,
           position,
           started_at,
           last_seen_at

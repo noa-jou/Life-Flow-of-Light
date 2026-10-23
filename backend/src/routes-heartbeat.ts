@@ -3,14 +3,14 @@ import type { DatabaseSync } from 'node:sqlite';
 
 type Position = 'bedroom' | 'bathroom' | 'living_room';
 
-type Lamp = {
+type Bulb = {
   id: number;
   position: Position | null;
 };
 
 type LightSession = {
   id: number;
-  lamp_id: number;
+  bulb_id: number;
   position: Position;
   started_at: number;
   last_seen_at: number;
@@ -26,22 +26,22 @@ export function createHeartbeatRouter(
 ) {
   const router = Router();
 
-  router.post('/lamps/:id/heartbeat', (request, response) => {
+  router.post('/bulbs/:id/heartbeat', (request, response) => {
     const rawId = request.params.id;
 
-    // Only accept positive integer lamp IDs.
+    // Only accept positive integer bulb IDs.
     if (!/^[1-9]\d*$/.test(rawId)) {
       response.status(400).json({
-        error: 'Lamp ID must be a positive integer.'
+        error: 'Bulb ID must be a positive integer.'
       });
       return;
     }
 
-    const lampId = Number(rawId);
+    const bulbId = Number(rawId);
 
-    if (!Number.isSafeInteger(lampId)) {
+    if (!Number.isSafeInteger(bulbId)) {
       response.status(400).json({
-        error: 'Lamp ID must be a positive integer.'
+        error: 'Bulb ID must be a positive integer.'
       });
       return;
     }
@@ -49,7 +49,7 @@ export function createHeartbeatRouter(
     let transactionOpen = false;
 
     try {
-      // Keep the lamp lookup, session lookup, and write together.
+      // Keep the bulb lookup, session lookup, and write together.
       // Another writer cannot change the installation during this operation.
       database.exec('BEGIN IMMEDIATE');
       transactionOpen = true;
@@ -60,42 +60,42 @@ export function createHeartbeatRouter(
         throw new Error('Invalid server timestamp.');
       }
 
-      const lamp = database.prepare(`
+      const bulb = database.prepare(`
         SELECT id, position
-        FROM lamps
+        FROM bulbs
         WHERE id = ?
-      `).get(lampId) as Lamp | undefined;
+      `).get(bulbId) as Bulb | undefined;
 
-      if (!lamp) {
+      if (!bulb) {
         database.exec('ROLLBACK');
         transactionOpen = false;
 
         response.status(404).json({
-          error: 'Lamp not found.'
+          error: 'Bulb not found.'
         });
         return;
       }
 
-      // An uninstalled lamp must not create lighting records.
-      if (lamp.position === null) {
+      // An uninstalled bulb must not create lighting records.
+      if (bulb.position === null) {
         database.exec('ROLLBACK');
         transactionOpen = false;
 
         response.status(409).json({
-          error: 'Lamp must be installed before sending heartbeats.'
+          error: 'Bulb must be installed before sending heartbeats.'
         });
         return;
       }
 
-      // Find this lamp's latest session.
-      // Historical position comes from the session, not from the current lamp.
+      // Find this bulb's latest session.
+      // Historical position comes from the session, not from the current bulb.
       const previous = database.prepare(`
-        SELECT id, lamp_id, position, started_at, last_seen_at
+        SELECT id, bulb_id, position, started_at, last_seen_at
         FROM light_sessions
-        WHERE lamp_id = ?
+        WHERE bulb_id = ?
         ORDER BY started_at DESC, id DESC
         LIMIT 1
-      `).get(lampId) as LightSession | undefined;
+      `).get(bulbId) as LightSession | undefined;
 
       // Do not move a stored timestamp backwards if the server clock changes.
       if (previous && now < previous.last_seen_at) {
@@ -113,7 +113,7 @@ export function createHeartbeatRouter(
 
       if (
         previous &&
-        previous.position === lamp.position &&
+        previous.position === bulb.position &&
         now - previous.last_seen_at <= timeoutMs
       ) {
         // The light is still in the same continuous lighting session.
@@ -137,18 +137,18 @@ export function createHeartbeatRouter(
         // Copy the current position into the new historical record.
         const result = database.prepare(`
           INSERT INTO light_sessions (
-            lamp_id,
+            bulb_id,
             position,
             started_at,
             last_seen_at
           )
           VALUES (?, ?, ?, ?)
-        `).run(lamp.id, lamp.position, now, now);
+        `).run(bulb.id, bulb.position, now, now);
 
         session = {
           id: Number(result.lastInsertRowid),
-          lamp_id: lamp.id,
-          position: lamp.position,
+          bulb_id: bulb.id,
+          position: bulb.position,
           started_at: now,
           last_seen_at: now
         };

@@ -2,7 +2,7 @@
 // All timestamps and durations below are measured in milliseconds.
 export interface LightSession {
   id: number;
-  lamp_id: number;
+  bulb_id: number;
   position: string;
   started_at: number;
   last_seen_at: number;
@@ -77,7 +77,7 @@ function matches(actual: number, units: number): boolean {
   );
 }
 
-// Estimate when the lamp turned off.
+// Estimate when the bulb turned off.
 //
 // Our seed stores the last heartbeat 200 ms before switch-off.
 // This is an estimate, not an exact measurement of physical switch-off.
@@ -113,11 +113,11 @@ export function detectMorse(
     const previous = group?.at(-1);
 
     // Pulses belong to the same letter when:
-    // 1. They come from the same lamp and position.
+    // 1. They come from the same bulb and position.
     // 2. The dark gap matches one Morse unit.
     if (
       previous
-      && previous.lamp_id === session.lamp_id
+      && previous.bulb_id === session.bulb_id
       && previous.position === session.position
       && matches(
         session.started_at - estimatedOff(previous),
@@ -133,11 +133,11 @@ export function detectMorse(
 
   const results: MorseMessage[] = [];
 
-  // Keep lamp identity internally so different lamps are never
+  // Keep bulb identity internally so different bulbs are never
   // combined into one message. These extra fields are not returned.
   let current:
     | (MorseMessage & {
-        lamp_id: number;
+        bulb_id: number;
         position: string;
       })
     | undefined;
@@ -248,7 +248,7 @@ export function detectMorse(
 
       const continuesCurrentMessage =
         current
-        && current.lamp_id === first.lamp_id
+        && current.bulb_id === first.bulb_id
         && current.position === first.position
         && (matches(gap, 3) || matches(gap, 7));
 
@@ -266,13 +266,13 @@ export function detectMorse(
       ? first.started_at - current.end_time
       : Infinity;
 
-    const sameLamp =
-      current?.lamp_id === first.lamp_id
+    const sameBulb =
+      current?.bulb_id === first.bulb_id
       && current?.position === first.position;
 
     if (
       current
-      && sameLamp
+      && sameBulb
       && (matches(gap, 3) || matches(gap, 7))
     ) {
       // A word gap adds a space.
@@ -282,14 +282,14 @@ export function detectMorse(
       current.message += separator + letter;
       current.end_time = estimatedOff(last);
     } else {
-      // A different lamp or an unrelated gap starts a new message.
+      // A different bulb or an unrelated gap starts a new message.
       finishMessage();
 
       current = {
         start_time: first.started_at,
         end_time: estimatedOff(last),
         message: letter,
-        lamp_id: first.lamp_id,
+        bulb_id: first.bulb_id,
         position: first.position
       };
     }

@@ -3,7 +3,7 @@ import { database } from './database.js';
 
 type Position = 'living_room' | 'bedroom' | 'bathroom';
 
-type DemoLamp = {
+type DemoBulb = {
   id: number;
   position: Position;
   name: string;
@@ -86,12 +86,12 @@ try {
 
   const counts = database.prepare(`
     SELECT
-      (SELECT COUNT(*) FROM lamps) AS lamps,
+      (SELECT COUNT(*) FROM bulbs) AS bulbs,
       (SELECT COUNT(*) FROM light_sessions) AS sessions
-  `).get() as { lamps: number; sessions: number };
+  `).get() as { bulbs: number; sessions: number };
 
   // Never delete or silently replace existing demo or user records.
-  if (counts.lamps !== 0 || counts.sessions !== 0) {
+  if (counts.bulbs !== 0 || counts.sessions !== 0) {
     throw new Error(
       'Seed cancelled: the database must be empty. Existing data was preserved.'
     );
@@ -99,14 +99,14 @@ try {
 
   // Prepare reusable INSERT statements.
   // The question marks are placeholders for values supplied by .run().
-  const insertLamp = database.prepare(`
-    INSERT INTO lamps (serial_number, name, position)
+  const insertBulb = database.prepare(`
+    INSERT INTO bulbs (serial_number, name, position)
     VALUES (?, ?, ?)
   `);
 
   const insertSession = database.prepare(`
     INSERT INTO light_sessions (
-      lamp_id,
+      bulb_id,
       position,
       started_at,
       last_seen_at
@@ -114,12 +114,12 @@ try {
     VALUES (?, ?, ?, ?)
   `);
 
-  function register(name: string, position: Position): DemoLamp {
-    // Each demo lamp gets its own permanent, random serial number.
+  function register(name: string, position: Position): DemoBulb {
+    // Each demo bulb gets its own permanent, random serial number.
     // A, B, and C are display names, not serial numbers.
     const serialNumber = randomUUID();
 
-    const result = insertLamp.run(serialNumber, name, position);
+    const result = insertBulb.run(serialNumber, name, position);
 
     return {
       id: Number(result.lastInsertRowid),
@@ -135,7 +135,7 @@ try {
   let sessionCount = 0;
 
   function record(
-    lamp: DemoLamp,
+    bulb: DemoBulb,
     start: number,
     off: number
   ): void {
@@ -156,8 +156,8 @@ try {
     // The switch-off instant itself does not send a heartbeat.
     // Store one session row, not a separate row for every heartbeat.
     insertSession.run(
-      lamp.id,
-      lamp.position,
+      bulb.id,
+      bulb.position,
       start,
       off - heartbeatMs
     );
@@ -188,14 +188,14 @@ try {
   const helpStart = helpEnd - helpUnits * unitMs;
 
   for (const [index, day] of days.entries()) {
-    // Every morning: all three lamps are on from 07:00 to 08:30.
-    for (const lamp of [a, b, c]) {
-      record(lamp, at(day, 7), at(day, 8, 30));
+    // Every morning: all three bulbs are on from 07:00 to 08:30.
+    for (const bulb of [a, b, c]) {
+      record(bulb, at(day, 7), at(day, 8, 30));
     }
 
     // Every evening: A and C are on from 18:00 to 21:00.
-    for (const lamp of [a, c]) {
-      record(lamp, at(day, 18), at(day, 21));
+    for (const bulb of [a, c]) {
+      record(bulb, at(day, 18), at(day, 21));
     }
 
     // B is normally on from 21:00 to 22:00.
@@ -210,7 +210,7 @@ try {
     record(b, at(day, 21), eveningOff);
   }
 
-  // Insert the individual flashes of HELP for lamp B.
+  // Insert the individual flashes of HELP for bulb B.
   let cursor = helpStart;
 
   for (const [letterIndex, letter] of help.entries()) {
@@ -241,11 +241,11 @@ try {
     );
   }
 
-  // Save all three lamps and all sessions together.
+  // Save all three bulbs and all sessions together.
   database.exec('COMMIT');
   transactionOpen = false;
 
-  console.log(`Created 3 lamps and ${sessionCount} lighting sessions.`);
+  console.log(`Created 3 bulbs and ${sessionCount} lighting sessions.`);
   console.log(`Schedule timezone: ${timezone}.`);
   console.log(
     `Demo dates: ${days.map(formatDay).join(', ')} ` +
