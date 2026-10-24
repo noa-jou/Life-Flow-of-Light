@@ -300,3 +300,13 @@
   font-weight: 700;
   line-height: 1;
 }
+
+/* Show the reason beside the affected bulb. */
+.bulb-uninstall-warning {
+  flex: 0 0 100%;
+  margin: 6px 0 0;
+
+  color: #a12622;
+  font-size: 13px;
+  line-height: 1.5;
+}

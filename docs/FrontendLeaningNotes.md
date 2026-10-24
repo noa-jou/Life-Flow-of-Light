@@ -777,3 +777,479 @@ These requests verify reading data through both routes. They do not test all wri
 I also manually tested the implemented interface functions and reported that they worked smoothly.
 
 The current completed feature is bulb management. The House and History panel contents remain future work.
+
+---
+
+## 24. Progress update — 24 October 2026
+
+The House panel now works with the backend.
+
+Today, I added the floor plan, connected the light switches, and added Morse code instructions. I also fixed a problem that allowed an active bulb to be uninstalled.
+
+I tested the changes on my computer and confirmed that they worked.
+
+The earlier sections describe an earlier stage. The following points have now changed:
+
+- House is no longer empty.
+- App translations now live in `i18n.ts`.
+- App owns the shared heartbeat manager.
+- Bulbs and House use the same light state.
+- Confirmation messages use a shared page dialog.
+
+The History panel is still future work.
+
+## 25. New files and their jobs
+
+The new files are inside `frontend/src/`:
+
+| File | Job |
+| --- | --- |
+| `house/HousePanel.tsx` | Displays the floor plan and light switches. |
+| `house/HousePanel.css` | Styles the floor plan, switches, and guide layout. |
+| `house/house-text.ts` | Stores text for the House interface. |
+| `house/house-api.ts` | Sends heartbeat requests. |
+| `house/useBulbHeartbeats.ts` | Manages light state, timers, and pending requests. |
+| `house/MorseGuide.tsx` | Displays Morse instructions and the A–Z reference. |
+| `components/Dialog.tsx` | Manages and displays the shared page dialog. |
+| `components/dialog-context.ts` | Lets components access the shared dialog. |
+| `components/Dialog.css` | Styles the dialog and its backdrop. |
+
+Each file has a clear job.
+
+For example, changing the floor plan layout should not require changing the heartbeat API code.
+
+## 26. Placing switches on the floor plan
+
+The floor plan is displayed inside an SVG.
+
+The SVG uses a `viewBox` to define its coordinate system. Each room has a fixed point in that system.
+
+The image and switches use the same coordinates, so they scale together.
+
+I learned these SVG features:
+
+| Feature | Purpose |
+| --- | --- |
+| `viewBox` | Defines the drawing coordinates. |
+| `preserveAspectRatio` | Keeps the drawing in proportion and centered. |
+| `<image>` | Displays the floor plan image. |
+| `<foreignObject>` | Allows an HTML button inside the SVG. |
+| `transform` | Rotates or moves the image. |
+
+The image keeps the same direction in both half-width and full-width layouts.
+
+The switches stay upright and remain in their rooms.
+
+When House is fully open:
+
+- The left side shows the A–Z reference.
+- The center shows the floor plan.
+- The right side shows Morse instructions.
+
+When House is half open, the guides are hidden.
+
+The image still scales to fit the available space. Its exact size is not locked.
+
+## 27. Showing whether a room has a bulb
+
+A switch has three main appearances:
+
+| Situation | Appearance | Can turn on? |
+| --- | --- | --- |
+| No bulb installed | White background, black outline | No |
+| Bulb installed and off | Black background, white outline | Yes |
+| Bulb installed and on | Pale yellow background, gray outline | Already on |
+
+House loads the bulb list from the backend to check which rooms have installed bulbs.
+
+Loading and failure are different from an empty room:
+
+- While loading, the interface says it is checking.
+- If loading fails, the interface shows an error and a retry button.
+- Only a successful check can confirm that a room has no bulb.
+
+I learned not to treat missing information as a confirmed result.
+
+The unavailable button uses `aria-disabled` so it can still receive focus and show a reason.
+
+However, `aria-disabled` does not stop clicks by itself. The click handler must also reject the action.
+
+## 28. Updating House after a bulb change
+
+Bulbs and House need to stay in sync.
+
+After a successful bulb change:
+
+1. Bulbs calls `onBulbsChanged()`.
+2. App increases `bulbRevision`.
+3. House receives the new revision through props.
+4. House requests the latest bulb list.
+5. React updates the switches.
+
+`bulbRevision` is a frontend update counter. It is not a database field.
+
+I learned that a parent can pass a function to a child through props.
+
+The child calls that function to tell the parent that something happened.
+
+House also uses `AbortController` when loading data. If a newer request replaces an older one, the old result should not update the screen.
+
+## 29. Sending real heartbeats
+
+Turning on a bulb sends:
+
+```text
+POST /api/bulbs/:id/heartbeat
+```
+
+The development proxy removes `/api` before forwarding the request.
+
+The request does not need a JSON body. The backend determines the position and timestamp.
+
+The response means:
+
+- `201`: a new lighting session was created.
+- `200`: an existing session was updated.
+
+The frontend sends the first heartbeat immediately, then aims to send one every 200 milliseconds.
+
+It avoids overlapping requests for the same bulb.
+
+Turning the switch off stops future heartbeats. The backend considers the bulb off when the last heartbeat is more than one second old.
+
+I checked the database and confirmed:
+
+- Opening a new lighting session creates a record.
+- Continued heartbeats update `last_seen_at`.
+- Turning off stops those updates.
+- Turning on again after the timeout creates another session.
+
+There is no separate “off” record.
+
+## 30. State, refs, effects, and custom Hooks
+
+The heartbeat code helped me understand several React tools.
+
+| Tool | What it does in this project |
+| --- | --- |
+| `useState` | Stores values that affect the screen. |
+| `useRef` | Holds timers and request controllers without causing a render. |
+| `useEffect` | Connects to browser behavior and cleans up resources. |
+| `useCallback` | Keeps a function reference stable while its dependencies stay the same. |
+| Custom Hook | Groups related React logic into a reusable function. |
+
+Our custom Hook is called `useBulbHeartbeats()`.
+
+It separates heartbeat behavior from the floor plan drawing.
+
+The light states are:
+
+```ts
+'off'
+'starting'
+'on'
+'error'
+```
+
+The switch becomes yellow after the first successful heartbeat response.
+
+If a request fails, the loop stops and the interface shows an error.
+
+Cleanup matters too. Timers must be cleared and pending requests must be cancelled when they are no longer needed.
+
+Cancelling a request does not undo a heartbeat that the backend has already received.
+
+## 31. Sharing state between House and Bulbs
+
+At first, House owned the heartbeat manager.
+
+This meant Bulbs could not directly check whether a switch was on.
+
+We moved the Hook call into App:
+
+```tsx
+const heartbeats = useBulbHeartbeats();
+```
+
+App passes the same manager to both components:
+
+```tsx
+<BulbPanel heartbeats={heartbeats} /* other props */ />
+<HousePanel heartbeats={heartbeats} /* other props */ />
+```
+
+These are shortened examples, not complete replacements.
+
+This React pattern is called **lifting state up**.
+
+When two components need the same changing information, their common parent can own it.
+
+An important lesson:
+
+> Calling the same custom Hook in two components does not automatically share its state.
+
+We call the Hook once in App and share its result.
+
+We also used:
+
+```ts
+ReturnType<typeof useBulbHeartbeats>
+```
+
+This tells TypeScript to use the Hook’s return type, instead of writing the same type again by hand.
+
+## 32. Fixing the uninstall problem
+
+The intended rule is:
+
+> The user must turn the switch off before uninstalling the bulb.
+
+The backend already rejected uninstall requests when the last heartbeat was no more than one second old.
+
+However, the frontend had two problems:
+
+1. Bulbs did not check House’s switch state.
+2. The native confirmation dialog could pause JavaScript and interrupt heartbeats.
+
+The screen could remain yellow while the backend stopped receiving heartbeats.
+
+After the timeout, the backend could allow uninstalling.
+
+We added a frontend check before showing the confirmation:
+
+```tsx
+if (heartbeats.lights[bulb.position] !== 'off') {
+  setBlockedUninstallId(bulb.id);
+  return;
+}
+```
+
+This check runs only after confirming that `bulb.position` is not `null`.
+
+The `return` ends the operation immediately.
+
+No confirmation dialog opens, and no DELETE request is sent.
+
+The interface shows a message beside the affected bulb.
+
+Only `'off'` can continue. The states `'starting'`, `'on'`, and `'error'` are blocked.
+
+For an error state, clicking the House switch once resets it to off. Clicking again starts a new attempt to turn it on.
+
+The backend’s one-second check remains in place.
+
+Frontend checks guide the user. Backend checks protect the data.
+
+## 33. Reading Network errors carefully
+
+I learned that an HTTP status code alone does not explain which operation failed.
+
+These requests have different meanings:
+
+| Request | Meaning |
+| --- | --- |
+| `DELETE /api/bulbs/:id/position` | Try to uninstall a bulb. |
+| `POST /api/bulbs/:id/heartbeat` | Try to record a heartbeat. |
+
+During debugging, the uninstall request returned `200`, while a later heartbeat returned `409`.
+
+This meant uninstalling succeeded, and the later heartbeat was rejected.
+
+It did not mean the backend had rejected uninstalling.
+
+When checking an error, I should inspect:
+
+1. The request URL.
+2. The HTTP method.
+3. The status code.
+4. The response body.
+5. The order of nearby requests.
+
+A message in the browser console does not automatically create a message in the application. The frontend must decide how to display it.
+
+## 34. Replacing blocking browser dialogs
+
+We replaced `window.confirm()` and `window.alert()` in Bulbs with a shared page dialog.
+
+The shared files live in `src/components/`, because dialogs can be used by all three tabs.
+
+`DialogProvider` wraps the page once, outside the panel loop.
+
+Components use:
+
+```tsx
+const { ask, inform } = useDialog();
+```
+
+For a confirmation:
+
+```tsx
+const confirmed = await ask('Continue?');
+
+if (!confirmed) return;
+```
+
+For a notification:
+
+```tsx
+await inform('The operation is complete.');
+```
+
+The actual interface uses translated text instead of these example strings.
+
+I learned the difference between waiting and blocking:
+
+- `await` pauses that async function until its Promise finishes.
+- It does not pause all JavaScript.
+- Heartbeat timers can continue while the user reads the dialog.
+
+The page uses `<dialog>` with `showModal()`.
+
+This blocks background interaction without blocking the heartbeat code.
+
+## 35. Context, Provider, and Portal
+
+The shared dialog introduced three more React ideas.
+
+| Idea | Meaning in this project |
+| --- | --- |
+| Context | Gives components access to shared dialog actions. |
+| Provider | Makes those actions available to the components inside it. |
+| Portal | Places the dialog DOM outside the panel containers. |
+
+The Provider receives the page through `children`.
+
+The dialog uses:
+
+```tsx
+createPortal(dialogContent, document.body)
+```
+
+This places its HTML under the page body while keeping it connected to the React application.
+
+The dialog is not hidden or clipped by a collapsed tab.
+
+CSS centers it in the browser viewport.
+
+The current version displays one dialog at a time. A second call while a dialog is open returns `false`; it is not queued.
+
+## 36. Keeping translations and rendering organized
+
+We moved App’s translation dictionary from `App.tsx` into `i18n.ts` and named it `appText`.
+
+`i18n.ts` now contains:
+
+- The shared `Language` type.
+- `appText` for the page shell.
+- `dialogText` for the shared dialog.
+
+Feature text remains close to its feature, such as `bulb-text.ts` and `house-text.ts`.
+
+I also learned why conditional rendering matters inside a loop:
+
+```tsx
+{panelId === 1 && (
+  <BulbPanel /* props */ />
+)}
+
+{panelId === 2 && (
+  <HousePanel /* props */ />
+)}
+```
+
+The conditions place each component in the correct panel.
+
+Without the House condition, the floor plan appeared in every panel.
+
+React followed the JSX exactly. The problem was where we told it to render the component.
+
+## 37. Adding Morse code instructions
+
+The House guides explain how to send messages using the switches.
+
+The timings match the current backend decoder:
+
+| Action | Target duration |
+| --- | --- |
+| Dot | Light on for 2 seconds |
+| Dash | Light on for 6 seconds |
+| Gap inside a letter | Light off for 2 seconds |
+| Gap between letters | Light off for 6 seconds |
+| Gap between words | Light off for 14 seconds |
+
+A space does not have its own flashing pattern. It is represented by the gap between words.
+
+After the final signal, the guide asks the user to leave the light off for at least 18 seconds before checking the completed message.
+
+The guide includes `SOS` and an A–Z reference.
+
+These are instructions only. The guide does not automatically send Morse code or request decoding.
+
+I learned that instructions must match the actual program rules.
+
+## 38. Reloading, hiding, and removing are different
+
+Collapsing House does not mean turning its switches off.
+
+The heartbeat manager stays in App, so changing panel widths or the selected language does not stop it.
+
+Reloading the page is different:
+
+- The old page’s heartbeat loop ends.
+- The new page initializes all switches as off.
+- The backend may still need time to reach its timeout.
+
+The header now reminds users to:
+
+- Use only one frontend tab or window.
+- Expect switches to start off after reloading.
+
+These reminders do not technically prevent another browser tab from opening.
+
+Also, 200 milliseconds is a target interval, not a guarantee. Background tabs, network delays, and computer sleep can affect timing.
+
+## 39. What I verified today
+
+During today’s work, I ran:
+
+```bash
+npm run build
+npm run lint
+```
+
+I also manually tested:
+
+- The floor plan and room switch positions.
+- Half-width and full-width House layouts.
+- Language switching.
+- Installed and uninstalled switch appearances.
+- Heartbeat requests and database updates.
+- Turning lights off and starting new sessions.
+- Keeping lights active while changing the layout.
+- Rejecting uninstall when the switch is not off.
+- Uninstalling after turning off and waiting.
+- Shared dialog confirmation and cancellation.
+- Continued heartbeats while another operation’s dialog stays open.
+
+I reported that the final tests worked smoothly.
+
+Build and lint checks help find code problems. Browser tests check behavior. Network and database checks show what actually happened behind the interface.
+
+## 40. Main lessons from today
+
+I learned to ask:
+
+- Which component should own this state?
+- Which other components need to read it?
+- Does this action need a check before sending a request?
+- Does the backend check the rule too?
+- Could this interface stop another part of the program?
+- Am I reading the error from the correct request?
+
+The biggest lesson was that features can affect each other.
+
+A confirmation dialog looked like a small interface detail, but it interrupted the heartbeat simulation.
+
+Sharing state and using a non-blocking page dialog helped the parts work together.
+
+The next major feature is the History panel.

@@ -14,6 +14,8 @@ import {
 import type { Bulb, Position } from './bulb-api';
 import { bulbText } from './bulb-text';
 import type { Language } from '../i18n';
+import type { useBulbHeartbeats } from '../house/useBulbHeartbeats';
+import { useDialog } from '../components/dialog-context';
 
 import './BulbPanel.css';
 
@@ -21,6 +23,7 @@ type Props = {
   expanded: boolean;
   language: Language;
   onBulbsChanged: () => void;
+  heartbeats: ReturnType<typeof useBulbHeartbeats>;
 };
 
 type Editor = {
@@ -42,14 +45,20 @@ export default function BulbPanel({
   expanded,
   language,
   onBulbsChanged,
+  heartbeats,
 }: Props) {
   const text = bulbText[language];
+  const { ask, inform } = useDialog();
 
   const [bulbs, setBulbs] = useState<Bulb[]>([]);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [busy, setBusy] = useState(true);
   const [ready, setReady] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
+
+  // Remember which bulb needs an uninstall warning.
+  const [blockedUninstallId, setBlockedUninstallId] =
+    useState<number | null>(null);
 
   // A ref changes immediately and prevents overlapping requests.
   const requestLocked = useRef(true);
@@ -149,20 +158,20 @@ export default function BulbPanel({
     });
   }
 
-  function confirmRename(bulb: Bulb) {
+  async function confirmRename(bulb: Bulb) {
     if (!editor || editor.id !== bulb.id || controlsDisabled) return;
 
     const name = editor.name.trim();
 
     // Match the backend's Unicode code-point length check.
     if ([...name].length < 1 || [...name].length > 20) {
-      window.alert(text.invalidName);
+      await inform(text.invalidName);
       return;
     }
 
     if (name === bulb.name) return;
 
-    const confirmed = window.confirm(
+    const confirmed = await ask(
       `${text.renameQuestion}\n\n${bulb.name} → ${name}`,
     );
 
@@ -171,12 +180,24 @@ export default function BulbPanel({
     }
   }
 
-  function confirmPosition(bulb: Bulb, position: Position | '') {
+  async function confirmPosition(
+    bulb: Bulb,
+    position: Position | '',
+  ) {
     if (controlsDisabled) return;
 
     if (bulb.position !== null) {
+
+      // Only an explicitly off switch may proceed to uninstall.
+      if (heartbeats.lights[bulb.position] !== 'off') {
+        setBlockedUninstallId(bulb.id);
+        return;
+      }
+
+      setBlockedUninstallId(null);
+
       // Label the bulb name and its current installation position.
-      const confirmed = window.confirm(
+      const confirmed = await ask(
         `${text.uninstallQuestion}\n\n` +
         `${text.name}: ${bulb.name}\n` +
         `${text.dialogPosition}: ${text.positions[bulb.position]}`,
@@ -192,7 +213,7 @@ export default function BulbPanel({
     if (position === '' || !availablePositions.includes(position)) return;
 
     // Label the bulb name and the proposed installation position.
-    const confirmed = window.confirm(
+    const confirmed = await ask(
       `${text.installQuestion}\n\n` +
       `${text.name}: ${bulb.name}\n` +
       `${text.dialogPosition}: ${text.positions[position]}`,
@@ -231,7 +252,7 @@ export default function BulbPanel({
       return;
     }
 
-    const confirmed = window.confirm(
+    const confirmed = await ask(
       `${text.deleteQuestion}\n\n` +
       `${text.name}: ${bulb.name}\n\n` +
       text.deleteReminder,
@@ -250,7 +271,7 @@ export default function BulbPanel({
       const status = await deleteBulb(bulb.id);
 
       if (status !== 200) {
-        window.alert(text.deleteFailed);
+        await inform(text.deleteFailed);
         return;
       }
 
@@ -259,7 +280,7 @@ export default function BulbPanel({
       // Deletion also changes the bulb inventory.
       onBulbsChanged();
 
-      window.alert(text.deleteSuccess);
+      await inform(text.deleteSuccess);
 
       // Reload the complete list after the successful deletion.
       const data = await getBulbs();
@@ -276,7 +297,7 @@ export default function BulbPanel({
           message: errorMessage(error),
         });
       } else {
-        window.alert(text.deleteFailed);
+        await inform(text.deleteFailed);
       }
     } finally {
       requestLocked.current = false;
@@ -344,7 +365,7 @@ export default function BulbPanel({
               className="bulb-inline-controls"
               onSubmit={(event) => {
                 event.preventDefault();
-                confirmRename(bulb);
+                void confirmRename(bulb);
               }}
             >
               <input
@@ -433,11 +454,18 @@ export default function BulbPanel({
             onClick={(event) => {
               // Do not also trigger the row's name-editing action.
               event.stopPropagation();
-              confirmPosition(bulb, selectedPosition);
+              void confirmPosition(bulb, selectedPosition);
             }}
           >
             {bulb.position === null ? text.confirm : text.uninstall}
           </button>
+          {blockedUninstallId === bulb.id &&
+            bulb.position !== null &&
+            heartbeats.lights[bulb.position] !== 'off' && (
+              <p className="bulb-uninstall-warning" role="alert">
+                {text.switchMustBeOff}
+              </p>
+            )}
         </div>
       </li>
     );

@@ -31,9 +31,11 @@ export const bulbText = {
     deleteBulb: 'Delete bulb',
     deleteQuestion: 'Delete this bulb?',
     deleteReminder:
-    'Reminder: deletion will fail if this bulb has any usage history.',
+      'Reminder: deletion will fail if this bulb has any usage history.',
     deleteSuccess: 'Bulb deleted successfully. Reloading the list.',
     deleteFailed: 'Bulb deletion was unsuccessful.',
+    switchMustBeOff:
+      'Cannot uninstall: switch off this bulb in the house first.',
     positions: {
       bathroom: 'Bathroom',
       bedroom: 'Bedroom',
@@ -71,6 +73,8 @@ export const bulbText = {
     deleteReminder: '提醒：如果這顆燈泡有使用過的歷史，刪除不會成功。',
     deleteSuccess: '刪除成功，重新載入。',
     deleteFailed: '刪除無效。',
+    switchMustBeOff:
+      '無法解除安裝：請先到屋子關閉此燈泡。',
     positions: {
       bathroom: '浴室',
       bedroom: '臥室',

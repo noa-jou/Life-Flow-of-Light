@@ -4,7 +4,8 @@ import floorPlan from '../assets/Floor-Plan.png';
 import { houseText } from './house-text';
 import { getBulbs } from '../bulb/bulb-api';
 import type { Bulb } from '../bulb/bulb-api';
-import { useBulbHeartbeats } from './useBulbHeartbeats';
+import type { useBulbHeartbeats } from './useBulbHeartbeats';
+import MorseGuide from './MorseGuide';
 
 import './HousePanel.css';
 
@@ -12,6 +13,7 @@ type Props = {
     language: Language;
     fullWidth: boolean;
     bulbRevision: number;
+    heartbeats: ReturnType<typeof useBulbHeartbeats>;
 };
 
 type Room = 'living_room' | 'bathroom' | 'bedroom';
@@ -61,16 +63,17 @@ export default function HousePanel({
     language,
     fullWidth,
     bulbRevision,
+    heartbeats,
 }: Props) {
     const text = houseText[language];
 
-    // Manage the real heartbeat loops separately from the drawing.
+    // Use the shared manager created by App.
     const {
         lights,
         startLight,
         stopLight,
         stopInvalidLights,
-    } = useBulbHeartbeats();
+    } = heartbeats;
 
     const [inventory, setInventory] = useState<Inventory | null>(null);
     const [attempt, setAttempt] = useState(0);
@@ -118,9 +121,8 @@ export default function HousePanel({
         return () => controller.abort();
     }, [bulbRevision, attempt, stopInvalidLights]);
 
-    // Keep the original landscape orientation when House is fully open.
-    // Rotate clockwise when House shares the available space.
-    const portrait = !fullWidth;
+    // Keep the half-width orientation in both layouts.
+    const portrait = true;
 
     const drawingWidth = portrait ? IMAGE_HEIGHT : IMAGE_WIDTH;
     const drawingHeight = portrait ? IMAGE_WIDTH : IMAGE_HEIGHT;
@@ -128,8 +130,12 @@ export default function HousePanel({
     function toggleLight(room: Room) {
         const status = lights[room];
 
-        // Switching off must remain possible even during an inventory refresh.
-        if (status === 'starting' || status === 'on') {
+        // Clicking an active or failed switch explicitly turns it off.
+        if (
+            status === 'starting' ||
+            status === 'on' ||
+            status === 'error'
+        ) {
             stopLight(room);
             return;
         }
@@ -147,9 +153,8 @@ export default function HousePanel({
     }
 
     return (
-        <div className="house-panel">
+        <div className={`house-panel ${fullWidth ? 'is-full' : ''}`}>
             <div className="house-preview-note">
-                <p>{text.singleClientWarning}</p>
                 {!inventoryCurrent && (
                     <p role="status">{text.checking}</p>
                 )}
@@ -174,111 +179,125 @@ export default function HousePanel({
                     ) : null,
                 )}
             </div>
-            <svg
-                className="house-floor-plan"
-                viewBox={`0 0 ${drawingWidth} ${drawingHeight}`}
-                preserveAspectRatio="xMidYMid meet"
-                role="group"
-                aria-label={text.floorPlan}
-            >
-                <title>{text.floorPlan}</title>
+            <div className="house-layout">
 
-                {/* Rotate only the image. The buttons remain upright. */}
-                <image
-                    href={floorPlan}
-                    width={IMAGE_WIDTH}
-                    height={IMAGE_HEIGHT}
-                    transform={
-                        portrait
-                            ? `translate(${IMAGE_HEIGHT} 0) rotate(90)`
-                            : undefined
-                    }
-                />
+                {fullWidth && (
+                    <MorseGuide language={language} part="alphabet" />
+                )}
 
-                {rooms.map((room) => {
-                    // Apply the same clockwise rotation to each room's center.
-                    const centerX = portrait
-                        ? IMAGE_HEIGHT - room.y
-                        : room.x;
-                    const centerY = portrait ? room.x : room.y;
+                <div className="house-drawing">
+                    <svg
+                        className="house-floor-plan"
+                        viewBox={`0 0 ${drawingWidth} ${drawingHeight}`}
+                        preserveAspectRatio="xMidYMid meet"
+                        role="group"
+                        aria-label={text.floorPlan}
+                    >
+                        <title>{text.floorPlan}</title>
 
-                    const installed =
-                        inventoryReady &&
-                        inventory.bulbs.some(
-                            (bulb) => bulb.position === room.position,
-                        );
+                        {/* Rotate only the image. The buttons remain upright. */}
+                        <image
+                            href={floorPlan}
+                            width={IMAGE_WIDTH}
+                            height={IMAGE_HEIGHT}
+                            transform={
+                                portrait
+                                    ? `translate(${IMAGE_HEIGHT} 0) rotate(90)`
+                                    : undefined
+                            }
+                        />
 
-                    const lightStatus = lights[room.position];
+                        {rooms.map((room) => {
+                            // Apply the same clockwise rotation to each room's center.
+                            const centerX = portrait
+                                ? IMAGE_HEIGHT - room.y
+                                : room.x;
+                            const centerY = portrait ? room.x : room.y;
 
-                    const starting = lightStatus === 'starting';
-                    const isOn = lightStatus === 'on';
-                    const active = starting || isOn;
+                            const installed =
+                                inventoryReady &&
+                                inventory.bulbs.some(
+                                    (bulb) => bulb.position === room.position,
+                                );
 
-                    // Keep an active switch usable so the user can always switch it off.
-                    const unavailable = !installed && !active;
-                    const label = text[room.position];
+                            const lightStatus = lights[room.position];
 
-                    const status = starting
-                        ? text.starting
-                        : isOn
-                            ? text.on
-                            : !inventoryCurrent
-                                ? text.checking
-                                : inventoryFailed
-                                    ? text.loadFailed
-                                    : !installed
-                                        ? text.noBulb
-                                        : lightStatus === 'error'
-                                            ? text.heartbeatFailed
-                                            : text.off;
+                            const starting = lightStatus === 'starting';
+                            const isOn = lightStatus === 'on';
+                            const active = starting || isOn;
 
-                    const buttonState = unavailable
-                        ? 'is-unavailable'
-                        : isOn
-                            ? 'is-on'
-                            : 'is-off';
+                            // Keep an active switch usable so the user can always switch it off.
+                            const unavailable = !installed && !active;
+                            const label = text[room.position];
 
-                    return (
-                        <foreignObject
-                            key={room.position}
-                            x={centerX - BUTTON_SIZE / 2}
-                            y={centerY - BUTTON_SIZE / 2}
-                            width={BUTTON_SIZE}
-                            height={BUTTON_SIZE}
-                        >
-                            {/* A real HTML button supports mouse and keyboard input. */}
-                            <button
-                                id={room.buttonId}
-                                type="button"
-                                className={`house-light-button ${buttonState}`}
-                                aria-label={`${label}: ${status}`}
-                                aria-pressed={active}
-                                aria-busy={starting}
-                                aria-disabled={unavailable}
-                                title={`${label}: ${status}`}
-                                onClick={() => toggleLight(room.position)}
-                            >
-                                <svg
-                                    className="house-bulb-icon"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.7"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden="true"
+                            const status = starting
+                                ? text.starting
+                                : isOn
+                                    ? text.on
+                                    : !inventoryCurrent
+                                        ? text.checking
+                                        : inventoryFailed
+                                            ? text.loadFailed
+                                            : !installed
+                                                ? text.noBulb
+                                                : lightStatus === 'error'
+                                                    ? text.heartbeatFailed
+                                                    : text.off;
+
+                            const buttonState = unavailable
+                                ? 'is-unavailable'
+                                : isOn
+                                    ? 'is-on'
+                                    : 'is-off';
+
+                            return (
+                                <foreignObject
+                                    key={room.position}
+                                    x={centerX - BUTTON_SIZE / 2}
+                                    y={centerY - BUTTON_SIZE / 2}
+                                    width={BUTTON_SIZE}
+                                    height={BUTTON_SIZE}
                                 >
-                                    {/* Draw the bulb outline and its base. */}
-                                    <path
-                                        d="M9 17h6v-2.2a6 6 0 1 0-6 0V17Z"
-                                    />
-                                    <path d="M9 20h6M10 23h4" />
-                                </svg>
-                            </button>
-                        </foreignObject>
-                    );
-                })}
-            </svg>
+                                    {/* A real HTML button supports mouse and keyboard input. */}
+                                    <button
+                                        id={room.buttonId}
+                                        type="button"
+                                        className={`house-light-button ${buttonState}`}
+                                        aria-label={`${label}: ${status}`}
+                                        aria-pressed={active}
+                                        aria-busy={starting}
+                                        aria-disabled={unavailable}
+                                        title={`${label}: ${status}`}
+                                        onClick={() => toggleLight(room.position)}
+                                    >
+                                        <svg
+                                            className="house-bulb-icon"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="1.7"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            aria-hidden="true"
+                                        >
+                                            {/* Draw the bulb outline and its base. */}
+                                            <path
+                                                d="M9 17h6v-2.2a6 6 0 1 0-6 0V17Z"
+                                            />
+                                            <path d="M9 20h6M10 23h4" />
+                                        </svg>
+                                    </button>
+                                </foreignObject>
+                            );
+                        })}
+                    </svg>
+                </div>
+
+                {fullWidth && (
+                    <MorseGuide language={language} part="instructions" />
+                )}
+
+            </div>
         </div>
     );
 }

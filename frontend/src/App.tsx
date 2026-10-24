@@ -1,38 +1,14 @@
 import { useEffect, useState } from 'react';
 import BulbPanel from './bulb/BulbPanel';
 import HousePanel from './house/HousePanel';
-import type { Language } from './i18n';
+import { appText, type Language } from './i18n';
+import { useBulbHeartbeats } from './house/useBulbHeartbeats';
+import DialogProvider from './components/Dialog';
 
 import './App.css';
 
 type PanelId = 1 | 2 | 3;
 type Layout = '1' | '2' | '3' | '12' | '13' | '23';
-
-// Keep all interface text together so both languages use the same structure.
-const translations = {
-  en: {
-    appName: 'Life Flow of Light',
-    languageLabel: 'Language',
-    expand: 'Expand',
-    collapse: 'Collapse',
-    panels: {
-      1: 'Bulbs',
-      2: 'House',
-      3: 'History',
-    },
-  },
-  'zh-Hant': {
-    appName: '歲月流明',
-    languageLabel: '語言',
-    expand: '展開',
-    collapse: '收合',
-    panels: {
-      1: '燈泡',
-      2: '屋子',
-      3: '歷史',
-    },
-  },
-};
 
 // Panel order stays fixed regardless of language or layout.
 const panelIds: PanelId[] = [1, 2, 3];
@@ -81,13 +57,16 @@ export default function App() {
   // House uses it as a signal to fetch the latest installation data.
   const [bulbRevision, setBulbRevision] = useState(0);
 
+  // Share one heartbeat manager between House and Bulbs.
+  const heartbeats = useBulbHeartbeats();
+
   // Select the text dictionary for the current language.
-  const text = translations[language];
+  const text = appText[language];
 
   // Synchronize browser metadata with the selected interface language.
   useEffect(() => {
     document.documentElement.lang = language;
-    document.title = translations[language].appName;
+    document.title = appText[language].appName;
   }, [language]);
 
   function togglePanel(panelId: PanelId) {
@@ -97,100 +76,110 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <header className="app-toolbar">
-        {/* Display the project name in the selected language. */}
-        <h1 className="app-title">{text.appName}</h1>
-        <label htmlFor="language-select">
-          {text.languageLabel}
-        </label>
+    <DialogProvider language={language}>
+      <div className="app-shell">
+        <header className="app-toolbar">
+          {/* Display the project name in the selected language. */}
+          <h1 className="app-title">{text.appName}</h1>
 
-        <select
-          id="language-select"
-          value={language}
-          onChange={(event) => {
-            const nextLanguage = event.target.value;
+          <div className="app-notices">
+            <p>{text.singleClientWarning}</p>
+            <p>{text.reloadWarning}</p>
+          </div>
 
-            // Validate the browser's string value before updating state.
-            if (nextLanguage === 'en' || nextLanguage === 'zh-Hant') {
-              setLanguage(nextLanguage);
-            }
-          }}
-        >
-          <option value="en" lang="en">
-            English
-          </option>
+          <label htmlFor="language-select">
+            {text.languageLabel}
+          </label>
 
-          <option value="zh-Hant" lang="zh-Hant">
-            繁體中文
-          </option>
-        </select>
-      </header>
+          <select
+            id="language-select"
+            value={language}
+            onChange={(event) => {
+              const nextLanguage = event.target.value;
 
-      <main className="panel-viewport" aria-label={text.appName}>
-        <div className="folding-panels">
-          {panelIds.map((panelId) => {
-            const isOpen = layout.includes(String(panelId));
-            const title = text.panels[panelId];
-            const action = isOpen ? text.collapse : text.expand;
+              // Validate the browser's string value before updating state.
+              if (nextLanguage === 'en' || nextLanguage === 'zh-Hant') {
+                setLanguage(nextLanguage);
+              }
+            }}
+          >
+            <option value="en" lang="en">
+              English
+            </option>
 
-            const contentId = `panel-content-${panelId}`;
-            const titleId = `panel-title-${panelId}`;
+            <option value="zh-Hant" lang="zh-Hant">
+              繁體中文
+            </option>
+          </select>
+        </header>
 
-            return (
-              <section
-                key={panelId}
-                className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${panelId === 1 ? 'panel-bulbs' : ''
-                  }`}
-                aria-labelledby={titleId}
-              >
-                <h2 className="panel-heading">
-                  <button
-                    type="button"
-                    className="panel-toggle"
-                    aria-expanded={isOpen}
-                    aria-controls={contentId}
-                    aria-label={`${action} ${title}`}
-                    onClick={() => togglePanel(panelId)}
-                  >
-                    <span id={titleId} className="panel-title">
-                      {title}
-                    </span>
+        <main className="panel-viewport" aria-label={text.appName}>
+          <div className="folding-panels">
+            {panelIds.map((panelId) => {
+              const isOpen = layout.includes(String(panelId));
+              const title = text.panels[panelId];
+              const action = isOpen ? text.collapse : text.expand;
 
-                    <span className="panel-action" aria-hidden="true">
-                      {action}
-                    </span>
-                  </button>
-                </h2>
+              const contentId = `panel-content-${panelId}`;
+              const titleId = `panel-title-${panelId}`;
 
-                <div
-                  id={contentId}
-                  className="panel-content"
-                  hidden={!isOpen && panelId !== 1}
+              return (
+                <section
+                  key={panelId}
+                  className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${panelId === 1 ? 'panel-bulbs' : ''
+                    }`}
+                  aria-labelledby={titleId}
                 >
-                  {panelId === 1 && (
-                    <BulbPanel
-                      expanded={isOpen}
-                      language={language}
-                      onBulbsChanged={() => {
-                        setBulbRevision((current) => current + 1);
-                      }}
-                    />
-                  )}
+                  <h2 className="panel-heading">
+                    <button
+                      type="button"
+                      className="panel-toggle"
+                      aria-expanded={isOpen}
+                      aria-controls={contentId}
+                      aria-label={`${action} ${title}`}
+                      onClick={() => togglePanel(panelId)}
+                    >
+                      <span id={titleId} className="panel-title">
+                        {title}
+                      </span>
 
-                  {panelId === 2 && (
-                    <HousePanel
-                      language={language}
-                      fullWidth={layout === '2'}
-                      bulbRevision={bulbRevision}
-                    />
-                  )}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      </main>
-    </div>
+                      <span className="panel-action" aria-hidden="true">
+                        {action}
+                      </span>
+                    </button>
+                  </h2>
+
+                  <div
+                    id={contentId}
+                    className="panel-content"
+                    hidden={!isOpen && panelId !== 1}
+                  >
+                    {panelId === 1 && (
+                      <BulbPanel
+                        expanded={isOpen}
+                        language={language}
+                        heartbeats={heartbeats}
+                        onBulbsChanged={() => {
+                          setBulbRevision((current) => current + 1);
+                        }}
+                      />
+                    )}
+
+                    {panelId === 2 && (
+                      <HousePanel
+                        language={language}
+                        fullWidth={layout === '2'}
+                        bulbRevision={bulbRevision}
+                        heartbeats={heartbeats}
+                      />
+                    )}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </main>
+      </div>
+    </DialogProvider>
   );
 }
