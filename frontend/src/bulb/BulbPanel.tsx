@@ -20,6 +20,7 @@ import './BulbPanel.css';
 type Props = {
   expanded: boolean;
   language: Language;
+  onBulbsChanged: () => void;
 };
 
 type Editor = {
@@ -37,7 +38,11 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '';
 }
 
-export default function BulbPanel({ expanded, language }: Props) {
+export default function BulbPanel({
+  expanded,
+  language,
+  onBulbsChanged,
+}: Props) {
   const text = bulbText[language];
 
   const [bulbs, setBulbs] = useState<Bulb[]>([]);
@@ -110,6 +115,9 @@ export default function BulbPanel({ expanded, language }: Props) {
       if (change) {
         await change();
         changeSaved = true;
+
+        // Notify House as soon as the backend confirms the change.
+        onBulbsChanged();
       }
 
       // Always read the complete list after a successful change.
@@ -163,37 +171,37 @@ export default function BulbPanel({ expanded, language }: Props) {
     }
   }
 
-    function confirmPosition(bulb: Bulb, position: Position | '') {
+  function confirmPosition(bulb: Bulb, position: Position | '') {
     if (controlsDisabled) return;
 
     if (bulb.position !== null) {
-        // Label the bulb name and its current installation position.
-        const confirmed = window.confirm(
+      // Label the bulb name and its current installation position.
+      const confirmed = window.confirm(
         `${text.uninstallQuestion}\n\n` +
-            `${text.name}: ${bulb.name}\n` +
-            `${text.dialogPosition}: ${text.positions[bulb.position]}`,
-        );
+        `${text.name}: ${bulb.name}\n` +
+        `${text.dialogPosition}: ${text.positions[bulb.position]}`,
+      );
 
-        if (confirmed) {
+      if (confirmed) {
         void synchronize(() => uninstallBulb(bulb.id));
-        }
+      }
 
-        return;
+      return;
     }
 
     if (position === '' || !availablePositions.includes(position)) return;
 
     // Label the bulb name and the proposed installation position.
     const confirmed = window.confirm(
-        `${text.installQuestion}\n\n` +
-        `${text.name}: ${bulb.name}\n` +
-        `${text.dialogPosition}: ${text.positions[position]}`,
+      `${text.installQuestion}\n\n` +
+      `${text.name}: ${bulb.name}\n` +
+      `${text.dialogPosition}: ${text.positions[position]}`,
     );
 
     if (confirmed) {
-        void synchronize(() => installBulb(bulb.id, position));
+      void synchronize(() => installBulb(bulb.id, position));
     }
-    }
+  }
 
   // Translate known backend failures without exposing technical messages.
   let detail = '';
@@ -216,17 +224,17 @@ export default function BulbPanel({ expanded, language }: Props) {
   async function confirmDelete(bulb: Bulb) {
     // Only idle bulbs can be deleted from this interface.
     if (
-        bulb.position !== null ||
-        controlsDisabled ||
-        requestLocked.current
+      bulb.position !== null ||
+      controlsDisabled ||
+      requestLocked.current
     ) {
-        return;
+      return;
     }
 
     const confirmed = window.confirm(
-        `${text.deleteQuestion}\n\n` +
-        `${text.name}: ${bulb.name}\n\n` +
-        text.deleteReminder,
+      `${text.deleteQuestion}\n\n` +
+      `${text.name}: ${bulb.name}\n\n` +
+      text.deleteReminder,
     );
 
     if (!confirmed) return;
@@ -239,36 +247,40 @@ export default function BulbPanel({ expanded, language }: Props) {
     let deleted = false;
 
     try {
-        const status = await deleteBulb(bulb.id);
+      const status = await deleteBulb(bulb.id);
 
-        if (status !== 200) {
+      if (status !== 200) {
         window.alert(text.deleteFailed);
         return;
-        }
+      }
 
-        deleted = true;
-        window.alert(text.deleteSuccess);
+      deleted = true;
 
-        // Reload the complete list after the successful deletion.
-        const data = await getBulbs();
+      // Deletion also changes the bulb inventory.
+      onBulbsChanged();
 
-        setBulbs(data);
-        setEditor(null);
-        setReady(true);
+      window.alert(text.deleteSuccess);
+
+      // Reload the complete list after the successful deletion.
+      const data = await getBulbs();
+
+      setBulbs(data);
+      setEditor(null);
+      setReady(true);
     } catch (error: unknown) {
-        if (deleted) {
+      if (deleted) {
         // A refresh failure does not mean the deletion failed.
         setReady(false);
         setProblem({
-            phase: 'refresh',
-            message: errorMessage(error),
+          phase: 'refresh',
+          message: errorMessage(error),
         });
-        } else {
+      } else {
         window.alert(text.deleteFailed);
-        }
+      }
     } finally {
-        requestLocked.current = false;
-        setBusy(false);
+      requestLocked.current = false;
+      setBusy(false);
     }
   }
 
@@ -279,10 +291,10 @@ export default function BulbPanel({ expanded, language }: Props) {
 
     // Use an empty string when no installation position is available.
     const selectedPosition =
-    bulb.position ??
-    (editing &&
-    editor.position !== '' &&
-    availablePositions.includes(editor.position)
+      bulb.position ??
+      (editing &&
+        editor.position !== '' &&
+        availablePositions.includes(editor.position)
         ? editor.position
         : availablePositions.at(0) ?? '');
 
@@ -311,22 +323,22 @@ export default function BulbPanel({ expanded, language }: Props) {
         onClick={() => beginEditing(bulb)}
       >
         <div className="bulb-name-cell">
-            {bulb.position === null && (
-        <button
-            type="button"
-            className="bulb-delete-button"
-            aria-label={`${text.deleteBulb}: ${bulb.name}`}
-            title={text.deleteBulb}
-            disabled={controlsDisabled}
-            onClick={(event) => {
-            // Deleting should not also activate name editing.
-            event.stopPropagation();
-            void confirmDelete(bulb);
-            }}
-        >
-            X
-        </button>
-        )}
+          {bulb.position === null && (
+            <button
+              type="button"
+              className="bulb-delete-button"
+              aria-label={`${text.deleteBulb}: ${bulb.name}`}
+              title={text.deleteBulb}
+              disabled={controlsDisabled}
+              onClick={(event) => {
+                // Deleting should not also activate name editing.
+                event.stopPropagation();
+                void confirmDelete(bulb);
+              }}
+            >
+              X
+            </button>
+          )}
           {editing ? (
             <form
               className="bulb-inline-controls"
@@ -374,58 +386,58 @@ export default function BulbPanel({ expanded, language }: Props) {
         </code>
 
         <div className="bulb-inline-controls">
-        <select
+          <select
             aria-label={`${text.position}: ${bulb.name}`}
             value={selectedPosition}
             disabled={
-            controlsDisabled ||
-            bulb.position !== null ||
-            availablePositions.length === 0
+              controlsDisabled ||
+              bulb.position !== null ||
+              availablePositions.length === 0
             }
             onChange={(event) => {
-            const position = event.target.value;
+              const position = event.target.value;
 
-            if (!isPosition(position)) return;
+              if (!isPosition(position)) return;
 
-            // Selecting a position also selects this row for editing.
-            // Preserve the name draft if this row is already being edited.
-            setEditor((current) => ({
+              // Selecting a position also selects this row for editing.
+              // Preserve the name draft if this row is already being edited.
+              setEditor((current) => ({
                 id: bulb.id,
                 name: current?.id === bulb.id ? current.name : bulb.name,
                 position,
-            }));
+              }));
             }}
-        >
+          >
             {bulb.position !== null ? (
-            <option value={bulb.position}>
+              <option value={bulb.position}>
                 {text.positions[bulb.position]}
-            </option>
+              </option>
             ) : availablePositions.length === 0 ? (
-            <option value="">{text.noPositions}</option>
+              <option value="">{text.noPositions}</option>
             ) : (
-            availablePositions.map((position) => (
+              availablePositions.map((position) => (
                 <option key={position} value={position}>
-                {text.positions[position]}
+                  {text.positions[position]}
                 </option>
-            ))
+              ))
             )}
-        </select>
+          </select>
 
-        {/* Keep position actions visible without requiring a row selection. */}
-        <button
+          {/* Keep position actions visible without requiring a row selection. */}
+          <button
             type="button"
             disabled={
-            controlsDisabled ||
-            (bulb.position === null && selectedPosition === '')
+              controlsDisabled ||
+              (bulb.position === null && selectedPosition === '')
             }
             onClick={(event) => {
-            // Do not also trigger the row's name-editing action.
-            event.stopPropagation();
-            confirmPosition(bulb, selectedPosition);
+              // Do not also trigger the row's name-editing action.
+              event.stopPropagation();
+              confirmPosition(bulb, selectedPosition);
             }}
-        >
+          >
             {bulb.position === null ? text.confirm : text.uninstall}
-        </button>
+          </button>
         </div>
       </li>
     );

@@ -1,0 +1,92 @@
+.house-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.house-preview-note {
+  margin: 0;
+
+  color: #506b85;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.house-floor-plan {
+  /* SVG centers and scales the complete drawing inside this area. */
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.house-light-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Leave space around the button for its keyboard focus outline. */
+  width: 64px;
+  height: 64px;
+  margin: 6px;
+  padding: 12px;
+  box-sizing: border-box;
+
+  border: 2px solid #777777;
+  border-radius: 14px;
+
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
+}
+
+.house-light-button.is-off {
+  background: #171717;
+  color: #ffffff;
+}
+
+.house-light-button.is-on {
+  background: #ffe89a;
+  color: #666666;
+}
+
+.house-light-button:hover {
+  border-color: #315f88;
+}
+
+.house-light-button:focus-visible {
+  outline: 3px solid #315f88;
+  outline-offset: 2px;
+}
+
+.house-bulb-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Keep status text compact above the floor plan. */
+.house-preview-note p {
+  margin: 0;
+}
+
+.house-preview-note p + p {
+  margin-top: 6px;
+}
+
+/* A white button represents an unavailable switch. */
+.house-light-button.is-unavailable {
+  background: #ffffff;
+  color: #000000;
+  border-color: #777777;
+  cursor: not-allowed;
+}

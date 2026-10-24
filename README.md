@@ -3,7 +3,7 @@
 [歲月流明](README.zh-TW.md)
 
 <p align="center">
-  <img src="Icon.png"
+  <img src="frontend/src/assets/Icon.png"
        width="100"
        height="100"
        alt="Icon">

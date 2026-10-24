@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import BulbPanel from './bulb/BulbPanel';
+import HousePanel from './house/HousePanel';
 import type { Language } from './i18n';
 
 import './App.css';
@@ -76,6 +77,10 @@ export default function App() {
   // Start in English whenever the page is loaded.
   const [language, setLanguage] = useState<Language>('en');
 
+  // Increase this number when bulb data changes.
+  // House uses it as a signal to fetch the latest installation data.
+  const [bulbRevision, setBulbRevision] = useState(0);
+
   // Select the text dictionary for the current language.
   const text = translations[language];
 
@@ -135,9 +140,8 @@ export default function App() {
             return (
               <section
                 key={panelId}
-                className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${
-                  panelId === 1 ? 'panel-bulbs' : ''
-                }`}
+                className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${panelId === 1 ? 'panel-bulbs' : ''
+                  }`}
                 aria-labelledby={titleId}
               >
                 <h2 className="panel-heading">
@@ -165,7 +169,21 @@ export default function App() {
                   hidden={!isOpen && panelId !== 1}
                 >
                   {panelId === 1 && (
-                    <BulbPanel expanded={isOpen} language={language} />
+                    <BulbPanel
+                      expanded={isOpen}
+                      language={language}
+                      onBulbsChanged={() => {
+                        setBulbRevision((current) => current + 1);
+                      }}
+                    />
+                  )}
+
+                  {panelId === 2 && (
+                    <HousePanel
+                      language={language}
+                      fullWidth={layout === '2'}
+                      bulbRevision={bulbRevision}
+                    />
                   )}
                 </div>
               </section>
