@@ -1,4 +1,4 @@
-/* 計算寬度時，把 padding 和 border 一起算進去。 */
+/* Include padding and borders in element dimensions. */
 *,
 *::before,
 *::after {
@@ -22,12 +22,12 @@ background: #dbe7f2;
 }
 
 body {
-  /* 瀏覽器預設有外邊距；移除後才能讓介面貼齊視窗。 */
+  /* Remove the browser's default page margin. */
   margin: 0;
   min-width: 320px;
 }
 
-/* 讓按鈕沿用頁面的字型。 */
+/* Let buttons inherit the page font. */
 button {
   font: inherit;
 }

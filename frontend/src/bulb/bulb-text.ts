@@ -1,20 +1,18 @@
-export type Language = 'en' | 'zh-Hant';
-
-export const BulbText = {
+export const bulbText = {
   en: {
     name: 'Name',
     serial: 'Factory serial number',
     position: 'Installation position',
     idle: 'Idle',
-    add: 'Add Bulb',
+    add: 'Add bulb',
     confirmChange: 'Rename',
-    confirm: 'Confirm',
+    confirm: 'Install',
     uninstall: 'Uninstall',
     loading: 'Loading…',
     saving: 'Saving…',
-    empty: 'No Bulbs yet.',
+    empty: 'No bulbs yet.',
     noPositions: 'No available positions',
-    reload: 'Reload Bulbs',
+    reload: 'Reload bulbs',
     invalidName: 'Enter a name containing 1–20 characters.',
     renameQuestion: 'Are you sure you want to rename this bulb?',
     installQuestion: 'Install this bulb at the following position?',
@@ -30,11 +28,11 @@ export const BulbText = {
     alreadyInstalled: 'Uninstall this bulb before choosing another position.',
     missing: 'This bulb no longer exists.',
     dialogPosition: 'Position',
-    deleteBulb: 'Delete Bulb',
+    deleteBulb: 'Delete bulb',
     deleteQuestion: 'Delete this bulb?',
     deleteReminder:
     'Reminder: deletion will fail if this bulb has any usage history.',
-    deleteSuccess: 'bulb deleted successfully. Reloading the list.',
+    deleteSuccess: 'Bulb deleted successfully. Reloading the list.',
     deleteFailed: 'Bulb deletion was unsuccessful.',
     positions: {
       bathroom: 'Bathroom',

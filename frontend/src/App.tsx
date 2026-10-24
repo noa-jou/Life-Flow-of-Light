@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import BulbPanel from './bulb/BulbPanel';
+import type { Language } from './i18n';
+
 import './App.css';
-import BulbPanel from './BulbPanel';
 
 type PanelId = 1 | 2 | 3;
 type Layout = '1' | '2' | '3' | '12' | '13' | '23';
-type Language = 'en' | 'zh-Hant';
 
 // Keep all interface text together so both languages use the same structure.
 const translations = {
@@ -135,7 +136,7 @@ export default function App() {
               <section
                 key={panelId}
                 className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${
-                  panelId === 1 ? 'panel-Bulbs' : ''
+                  panelId === 1 ? 'panel-bulbs' : ''
                 }`}
                 aria-labelledby={titleId}
               >

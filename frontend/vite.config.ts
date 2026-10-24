@@ -10,7 +10,7 @@ export default defineConfig({
         target: 'http://127.0.0.1:3000',
         changeOrigin: true,
 
-        // Forward /api/lamps to the backend's /lamps endpoint.
+        // Remove the /api prefix before forwarding requests to the backend.
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },

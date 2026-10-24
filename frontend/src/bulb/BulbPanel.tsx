@@ -13,7 +13,7 @@ import {
 
 import type { Bulb, Position } from './bulb-api';
 import { bulbText } from './bulb-text';
-import type { Language } from './bulb-text';
+import type { Language } from '../i18n';
 
 import './BulbPanel.css';
 

@@ -1,6 +1,6 @@
 export type Position = 'bathroom' | 'bedroom' | 'living_room';
 
-export type Lamp = {
+export type Bulb = {
   id: number;
   serial_number: string;
   name: string;
@@ -22,7 +22,7 @@ export function isPosition(value: unknown): value is Position {
   );
 }
 
-function isLamp(value: unknown): value is Lamp {
+function isBulb(value: unknown): value is Bulb {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -68,26 +68,26 @@ async function request(
   return data;
 }
 
-export async function getLamps(signal?: AbortSignal): Promise<Lamp[]> {
-  const data = await request('/lamps', { signal });
+export async function getBulbs(signal?: AbortSignal): Promise<Bulb[]> {
+  const data = await request('/bulbs', { signal });
 
   // TypeScript types alone cannot validate data received over the network.
-  if (!Array.isArray(data) || !data.every(isLamp)) {
-    throw new Error('Invalid lamp response.');
+  if (!Array.isArray(data) || !data.every(isBulb)) {
+    throw new Error('Invalid bulb response.');
   }
 
   return data;
 }
 
-export function createLamp(): Promise<unknown> {
+export function createBulb(): Promise<unknown> {
   // The backend generates the ID, serial number, and initial name.
-  return request('/lamps', {
+  return request('/bulbs', {
     method: 'POST',
   });
 }
 
-export function renameLamp(id: number, name: string): Promise<unknown> {
-  return request(`/lamps/${id}`, {
+export function renameBulb(id: number, name: string): Promise<unknown> {
+  return request(`/bulbs/${id}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -96,11 +96,11 @@ export function renameLamp(id: number, name: string): Promise<unknown> {
   });
 }
 
-export function installLamp(
+export function installBulb(
   id: number,
   position: Position,
 ): Promise<unknown> {
-  return request(`/lamps/${id}/position`, {
+  return request(`/bulbs/${id}/position`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -109,14 +109,14 @@ export function installLamp(
   });
 }
 
-export function uninstallLamp(id: number): Promise<unknown> {
-  return request(`/lamps/${id}/position`, {
+export function uninstallBulb(id: number): Promise<unknown> {
+  return request(`/bulbs/${id}/position`, {
     method: 'DELETE',
   });
 }
 
-export async function deleteLamp(id: number): Promise<number> {
-  const response = await fetch(`/api/lamps/${id}`, {
+export async function deleteBulb(id: number): Promise<number> {
+  const response = await fetch(`/api/bulbs/${id}`, {
     method: 'DELETE',
   });
 
