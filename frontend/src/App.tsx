@@ -159,6 +159,7 @@ export default function App() {
                         expanded={isOpen}
                         language={language}
                         heartbeats={heartbeats}
+                        fullWidth={layout === '1'}
                         onBulbsChanged={() => {
                           setBulbRevision((current) => current + 1);
                         }}

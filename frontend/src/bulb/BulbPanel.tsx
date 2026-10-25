@@ -23,6 +23,7 @@ type Props = {
   expanded: boolean;
   language: Language;
   onBulbsChanged: () => void;
+  fullWidth: boolean;
   heartbeats: ReturnType<typeof useBulbHeartbeats>;
 };
 
@@ -43,6 +44,7 @@ function errorMessage(error: unknown): string {
 
 export default function BulbPanel({
   expanded,
+  fullWidth,
   language,
   onBulbsChanged,
   heartbeats,
@@ -59,6 +61,24 @@ export default function BulbPanel({
   // Remember which bulb needs an uninstall warning.
   const [blockedUninstallId, setBlockedUninstallId] =
     useState<number | null>(null);
+
+  // Find the bulb associated with the previous warning.
+  const warnedBulb = bulbs.find(
+    (bulb) => bulb.id === blockedUninstallId,
+  );
+
+  // Forget the warning once the switch is off,
+  // or the bulb is no longer installed.
+  if (
+    blockedUninstallId !== null &&
+    (
+      !warnedBulb ||
+      warnedBulb.position === null ||
+      heartbeats.lights[warnedBulb.position] === 'off'
+    )
+  ) {
+    setBlockedUninstallId(null);
+  }
 
   // A ref changes immediately and prevents overlapping requests.
   const requestLocked = useRef(true);
@@ -473,7 +493,8 @@ export default function BulbPanel({
 
   return (
     <div
-      className={`bulb-manager ${expanded ? 'is-expanded' : 'is-compact'}`}
+      className={`bulb-manager ${expanded ? 'is-expanded' : 'is-compact'
+        } ${fullWidth ? 'is-full' : 'is-half'}`}
       aria-busy={busy}
     >
       {busy && (
@@ -508,7 +529,7 @@ export default function BulbPanel({
         {expanded && (
           <div className="bulb-column-headings">
             <span>{text.name}</span>
-            <span>{text.serial}</span>
+            <span className="bulb-serial-heading">{text.serial}</span>
             <span>{text.position}</span>
           </div>
         )}

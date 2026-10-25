@@ -310,3 +310,15 @@
   font-size: 13px;
   line-height: 1.5;
 }
+
+/* Hide serial numbers when Bulbs shares the available width. */
+.bulb-manager.is-expanded.is-half .bulb-serial,
+.bulb-manager.is-expanded.is-half .bulb-serial-heading {
+  display: none;
+}
+
+/* Use two columns for both the headings and bulb rows. */
+.bulb-manager.is-expanded.is-half .bulb-column-headings,
+.bulb-manager.is-expanded.is-half .bulb-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
