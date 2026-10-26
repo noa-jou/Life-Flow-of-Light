@@ -314,3 +314,23 @@
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* Keep the collapsed History heading at the top. */
+.panel-history.is-collapsed .panel-heading {
+  flex: 0 0 auto;
+}
+
+.panel-history.is-collapsed .panel-toggle {
+  height: auto;
+  justify-content: flex-start;
+}
+
+/* Keep the collapsed House heading at the top. */
+.panel-house.is-collapsed .panel-heading {
+  flex: 0 0 auto;
+}
+
+.panel-house.is-collapsed .panel-toggle {
+  height: auto;
+  justify-content: flex-start;
+}

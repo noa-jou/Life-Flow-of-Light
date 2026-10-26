@@ -6,10 +6,12 @@ import { getBulbs } from '../bulb/bulb-api';
 import type { Bulb } from '../bulb/bulb-api';
 import type { useBulbHeartbeats } from './useBulbHeartbeats';
 import MorseGuide from './MorseGuide';
+import MorseButton from './MorseButton';
 
 import './HousePanel.css';
 
 type Props = {
+    expanded: boolean;
     language: Language;
     fullWidth: boolean;
     bulbRevision: number;
@@ -60,6 +62,7 @@ const rooms: {
     ];
 
 export default function HousePanel({
+    expanded,
     language,
     fullWidth,
     bulbRevision,
@@ -150,6 +153,72 @@ export default function HousePanel({
         if (!bulb) return;
 
         startLight(room, bulb.id);
+    }
+
+    // Show momentary switches while House is collapsed.
+    if (!expanded) {
+        const compactPositions: Room[] = [
+            'living_room',
+            'bedroom',
+            'bathroom',
+        ];
+
+        return (
+            <div className="house-compact">
+                {!inventoryCurrent && (
+                    <p role="status">{text.checking}</p>
+                )}
+
+                {inventoryFailed && (
+                    <p role="alert">
+                        {text.loadFailed}{' '}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setAttempt((current) => current + 1);
+                            }}
+                        >
+                            {text.retry}
+                        </button>
+                    </p>
+                )}
+
+                <div className="house-morse-buttons">
+                    {compactPositions.map((position) => {
+                        const bulb = inventoryReady
+                            ? inventory.bulbs.find(
+                                (item) => item.position === position,
+                            )
+                            : undefined;
+
+                        return (
+                            <MorseButton
+                                key={position}
+                                position={position}
+                                bulbId={bulb?.id ?? null}
+                                label={text[position]}
+                                unavailableText={text.noBulb}
+                                heartbeats={heartbeats}
+                            />
+                        );
+                    })}
+                </div>
+
+                <p className="house-morse-hint">
+                    {text.morseHoldHint}
+                    <br />
+                    {text.morseUnavailableHint}
+                </p>
+
+                {compactPositions.map((position) =>
+                    lights[position] === 'error' ? (
+                        <p key={position} role="alert">
+                            {text[position]}: {text.heartbeatFailed}
+                        </p>
+                    ) : null,
+                )}
+            </div>
+        );
     }
 
     return (

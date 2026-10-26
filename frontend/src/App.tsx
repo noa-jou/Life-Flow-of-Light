@@ -70,9 +70,19 @@ export default function App() {
   }, [language]);
 
   function togglePanel(panelId: PanelId) {
-    setLayout((previousLayout) => {
-      return transitions[previousLayout][panelId];
-    });
+    const nextLayout = transitions[layout][panelId];
+
+    const houseWasOpen = layout.includes('2');
+    const houseWillBeOpen = nextLayout.includes('2');
+
+    // Turn off all lights only when House changes from open to collapsed.
+    if (houseWasOpen && !houseWillBeOpen) {
+      heartbeats.stopLight('living_room');
+      heartbeats.stopLight('bedroom');
+      heartbeats.stopLight('bathroom');
+    }
+
+    setLayout(nextLayout);
   }
 
   return (
@@ -126,7 +136,9 @@ export default function App() {
               return (
                 <section
                   key={panelId}
-                  className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${panelId === 1 ? 'panel-bulbs' : ''
+                  className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${panelId === 1 ? 'panel-bulbs' :
+                    panelId === 2 ? 'panel-house' :
+                      'panel-history'
                     }`}
                   aria-labelledby={titleId}
                 >
@@ -152,7 +164,7 @@ export default function App() {
                   <div
                     id={contentId}
                     className="panel-content"
-                    hidden={!isOpen && panelId !== 1}
+                    hidden={!isOpen && panelId === 3}
                   >
                     {panelId === 1 && (
                       <BulbPanel
@@ -168,6 +180,7 @@ export default function App() {
 
                     {panelId === 2 && (
                       <HousePanel
+                        expanded={isOpen}
                         language={language}
                         fullWidth={layout === '2'}
                         bulbRevision={bulbRevision}

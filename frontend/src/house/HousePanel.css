@@ -90,3 +90,83 @@
   border-color: #777777;
   cursor: not-allowed;
 }
+
+.house-compact {
+  padding: 16px 12px;
+}
+
+.house-morse-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.house-morse-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  width: 100%;
+  min-height: 56px;
+  padding: 10px;
+
+  border: 1px solid #b8cde0;
+  border-radius: 8px;
+
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  /* Prevent scrolling or text selection during a press. */
+  touch-action: none;
+  user-select: none;
+}
+
+.house-morse-button .house-bulb-icon {
+  width: 24px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.house-morse-button span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.house-morse-button.is-off {
+  background: #222;
+  color: #fff;
+}
+
+.house-morse-button.is-on {
+  background: #ffd966;
+  color: #444;
+}
+
+.house-morse-button.is-unavailable {
+  background: #fff;
+  color: #222;
+  cursor: not-allowed;
+}
+
+.house-morse-button:focus-visible {
+  outline: 3px solid #315f88;
+  outline-offset: 3px;
+}
+
+.house-morse-hint {
+  margin: 14px 0 0;
+  color: #506b85;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Show an open hand when the button is available. */
+.house-morse-button:not(:disabled) {
+  cursor: grab;
+}
+
+/* Show a closed hand while the button is pressed. */
+.house-morse-button:not(:disabled):active {
+  cursor: grabbing;
+}

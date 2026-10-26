@@ -17,6 +17,9 @@ export const houseText = {
         starting: 'Turning on…',
         heartbeatFailed:
             'Heartbeat failed. Sending has stopped; check the backend and try again.',
+        morseHoldHint: 'Hold to light; release to turn off.',
+        morseUnavailableHint: 'Positions without bulbs are unavailable.',
+
     },
     'zh-Hant': {
         // Inside 'zh-Hant':
@@ -36,5 +39,7 @@ export const houseText = {
         starting: '正在開燈…',
         heartbeatFailed:
             '心跳傳送失敗，已停止發送。請確認後端狀態後再試。',
+        morseHoldHint: '按住亮燈，放開關燈。',
+        morseUnavailableHint: '未安裝燈泡的位置無法使用。',
     },
 };
