@@ -1,0 +1,130 @@
+.history-compact {
+    padding: 16px 12px;
+}
+
+.history-compact-hint {
+    margin: 0 0 16px;
+    color: #506b85;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.history-live-columns {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.history-live-column {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.history-live-track {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.history-live-cell {
+    display: block;
+    width: 10px;
+    height: 10px;
+    background: #b8cde0;
+    border-radius: 1px;
+}
+
+.history-live-label {
+    writing-mode: vertical-rl;
+    font-size: 13px;
+    line-height: 1.2;
+    color: #315f88;
+}
+
+.history-local-clock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.history-local-clock-label {
+    color: #506b85;
+    font-size: 12px;
+}
+
+.history-local-clock-value {
+    color: #315f88;
+    font-size: 22px;
+    font-weight: 600;
+
+    /* Keep the clock width stable as its digits change. */
+    font-variant-numeric: tabular-nums;
+}
+
+/* Preserve the light activity recorded in this second. */
+.history-live-cell.is-on {
+    background: #ffd966;
+}
+
+.history-expanded {
+  padding: 28px 16px 16px;
+}
+
+.history-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+
+  /* Leave room for focus outlines inside the scroll area. */
+  padding: 6px 6px 8px;
+}
+
+.history-filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.history-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    color: #315f88;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.history-filter input,
+.history-filter select {
+    min-width: 0;
+    padding: 6px 8px;
+
+    border: 1px solid #b8cde0;
+    border-radius: 6px;
+
+    background: #fff;
+    color: inherit;
+    font: inherit;
+}
+
+.history-filter input:focus-visible,
+.history-filter select:focus-visible {
+    outline: 3px solid #315f88;
+    outline-offset: 2px;
+}
+
+.history-date-error {
+    margin: 8px 0;
+    color: #a12622;
+    font-size: 13px;
+}

@@ -4,6 +4,9 @@ import HousePanel from './house/HousePanel';
 import { appText, type Language } from './i18n';
 import { useBulbHeartbeats } from './house/useBulbHeartbeats';
 import DialogProvider from './components/Dialog';
+import HistoryPanel from './history/HistoryPanel';
+import { useLiveTimeline } from './history/useLiveTimeline';
+import HistoryLiveHeader from './history/HistoryLiveHeader';
 
 import './App.css';
 
@@ -59,6 +62,9 @@ export default function App() {
 
   // Share one heartbeat manager between House and Bulbs.
   const heartbeats = useBulbHeartbeats();
+
+  // Share one timeline between the header and the collapsed view.
+  const timeline = useLiveTimeline(heartbeats.lights);
 
   // Select the text dictionary for the current language.
   const text = appText[language];
@@ -155,6 +161,13 @@ export default function App() {
                         {title}
                       </span>
 
+                      {panelId === 3 && isOpen && (
+                        <HistoryLiveHeader
+                          language={language}
+                          timeline={timeline}
+                        />
+                      )}
+
                       <span className="panel-action" aria-hidden="true">
                         {action}
                       </span>
@@ -164,7 +177,6 @@ export default function App() {
                   <div
                     id={contentId}
                     className="panel-content"
-                    hidden={!isOpen && panelId === 3}
                   >
                     {panelId === 1 && (
                       <BulbPanel
@@ -185,6 +197,14 @@ export default function App() {
                         fullWidth={layout === '2'}
                         bulbRevision={bulbRevision}
                         heartbeats={heartbeats}
+                      />
+                    )}
+
+                    {panelId === 3 && (
+                      <HistoryPanel
+                        expanded={isOpen}
+                        language={language}
+                        timeline={timeline}
                       />
                     )}
                   </div>

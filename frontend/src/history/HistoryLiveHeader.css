@@ -1,0 +1,81 @@
+.history-header-live {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    flex: 1;
+    min-width: 0;
+    max-width: 520px;
+    margin-inline: auto;
+
+    font-size: 11px;
+    font-weight: 400;
+    color: #315f88;
+}
+
+.history-header-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    flex: 1;
+    min-width: 0;
+}
+
+.history-header-row {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+}
+
+.history-header-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.history-header-track {
+    display: grid;
+    grid-template-columns: repeat(30, minmax(0, 1fr));
+    gap: 2px;
+    min-width: 0;
+}
+
+.history-header-cell {
+    display: block;
+    height: 8px;
+    background: #b8cde0;
+    border-radius: 1px;
+}
+
+.history-header-cell.is-on {
+    background: #ffd966;
+}
+
+.history-header-clock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.history-header-clock {
+  /* Place the clock before the three timeline rows. */
+  order: -1;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.panel-history.is-open .panel-toggle>.panel-title,
+.panel-history.is-open .panel-toggle>.panel-action {
+    flex-shrink: 0;
+}
