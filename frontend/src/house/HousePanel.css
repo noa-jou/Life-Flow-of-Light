@@ -170,3 +170,38 @@
 .house-morse-button:not(:disabled):active {
   cursor: grabbing;
 }
+
+/* Override the former three-column guide layout in both sizes. */
+.house-panel .house-layout,
+.house-panel.is-full .house-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  place-items: stretch;
+
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  gap: 0;
+}
+
+.house-panel .house-drawing,
+.house-panel.is-full .house-drawing {
+  grid-column: 1;
+  grid-row: 1;
+
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+}
+
+.house-panel .house-floor-plan {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

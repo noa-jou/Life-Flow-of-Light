@@ -5,7 +5,6 @@ import { houseText } from './house-text';
 import { getBulbs } from '../bulb/bulb-api';
 import type { Bulb } from '../bulb/bulb-api';
 import type { useBulbHeartbeats } from './useBulbHeartbeats';
-import MorseGuide from './MorseGuide';
 import MorseButton from './MorseButton';
 
 import './HousePanel.css';
@@ -124,8 +123,8 @@ export default function HousePanel({
         return () => controller.abort();
     }, [bulbRevision, attempt, stopInvalidLights]);
 
-    // Keep the half-width orientation in both layouts.
-    const portrait = true;
+    // Use landscape in full width and portrait in half width.
+    const portrait = !fullWidth;
 
     const drawingWidth = portrait ? IMAGE_HEIGHT : IMAGE_WIDTH;
     const drawingHeight = portrait ? IMAGE_WIDTH : IMAGE_HEIGHT;
@@ -250,10 +249,6 @@ export default function HousePanel({
             </div>
             <div className="house-layout">
 
-                {fullWidth && (
-                    <MorseGuide language={language} part="alphabet" />
-                )}
-
                 <div className="house-drawing">
                     <svg
                         className="house-floor-plan"
@@ -361,10 +356,6 @@ export default function HousePanel({
                         })}
                     </svg>
                 </div>
-
-                {fullWidth && (
-                    <MorseGuide language={language} part="instructions" />
-                )}
 
             </div>
         </div>

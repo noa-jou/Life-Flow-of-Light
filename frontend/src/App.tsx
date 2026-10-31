@@ -7,54 +7,42 @@ import DialogProvider from './dialog/Dialog';
 import HistoryPanel from './history/HistoryPanel';
 import { useLiveTimeline } from './history/useLiveTimeline';
 import HistoryLiveHeader from './history/HistoryLiveHeader';
+import { useDialog } from './dialog/dialog-context';
+import MorsePanel from './morse/MorsePanel';
 
 import './App.css';
 
-type PanelId = 1 | 2 | 3;
-type Layout = '1' | '2' | '3' | '12' | '13' | '23';
+type PanelId = 1 | 2 | 3 | 4;
 
-// Panel order stays fixed regardless of language or layout.
-const panelIds: PanelId[] = [1, 2, 3];
-
-// Each entry maps the current layout and clicked panel to the next layout.
-const transitions: Record<Layout, Record<PanelId, Layout>> = {
-  '1': {
-    1: '23',
-    2: '12',
-    3: '13',
-  },
-  '2': {
-    1: '12',
-    2: '13',
-    3: '23',
-  },
-  '3': {
-    1: '13',
-    2: '23',
-    3: '12',
-  },
-  '12': {
-    1: '2',
-    2: '1',
-    3: '23',
-  },
-  '13': {
-    1: '3',
-    2: '23', // Opening House closes Bulbs.
-    3: '1',
-  },
-  '23': {
-    1: '12',
-    2: '3',
-    3: '2',
-  },
-};
+const panelIds: PanelId[] = [1, 2, 3, 4];
 
 export default function App() {
-  const [layout, setLayout] = useState<Layout>('23');
-
-  // Start in English whenever the page is loaded.
   const [language, setLanguage] = useState<Language>('en');
+
+  return (
+    <DialogProvider language={language}>
+      <AppContent
+        language={language}
+        onLanguageChange={setLanguage}
+      />
+    </DialogProvider>
+  );
+}
+
+type AppContentProps = {
+  language: Language;
+  onLanguageChange: (language: Language) => void;
+};
+
+function AppContent({
+  language,
+  onLanguageChange,
+}: AppContentProps) {
+  const [openPanels, setOpenPanels] = useState<PanelId[]>([2, 3]);
+  const { choose } = useDialog();
+
+  // Keep the existing full-width checks working.
+  const layout = openPanels.join('');
 
   // Increase this number when bulb data changes.
   // House uses it as a signal to fetch the latest installation data.
@@ -75,145 +63,182 @@ export default function App() {
     document.title = appText[language].appName;
   }, [language]);
 
-  function togglePanel(panelId: PanelId) {
-    const nextLayout = transitions[layout][panelId];
+  async function togglePanel(panelId: PanelId) {
+    const isOpen = openPanels.includes(panelId);
+    let nextPanels: PanelId[];
 
-    const houseWasOpen = layout.includes('2');
-    const houseWillBeOpen = nextLayout.includes('2');
+    if (isOpen && openPanels.length === 1) {
+      const answer = await choose(
+        text.chooseNextPanel,
+        panelIds
+          .filter((id) => id !== panelId)
+          .map((id) => ({
+            value: String(id),
+            label: text.panels[id],
+          })),
+      );
 
-    // Turn off all lights only when House changes from open to collapsed.
+      const selectedPanel = panelIds.find(
+        (id) => id !== panelId && String(id) === answer,
+      );
+
+      // Cancel leaves the current layout and lights unchanged.
+      if (selectedPanel === undefined) return;
+
+      nextPanels = [selectedPanel];
+    } else if (isOpen) {
+      nextPanels = openPanels.filter((id) => id !== panelId);
+    } else {
+      // Keep the most recently opened panel and open the requested one.
+      nextPanels = [...openPanels.slice(-1), panelId];
+    }
+
+    const houseWasOpen = openPanels.includes(2);
+    const houseWillBeOpen = nextPanels.includes(2);
+
     if (houseWasOpen && !houseWillBeOpen) {
       heartbeats.stopLight('living_room');
       heartbeats.stopLight('bedroom');
       heartbeats.stopLight('bathroom');
     }
 
-    setLayout(nextLayout);
+    setOpenPanels(nextPanels);
   }
 
   return (
-    <DialogProvider language={language}>
-      <div className="app-shell">
-        <header className="app-toolbar">
-          {/* Display the project name in the selected language. */}
-          <h1 className="app-title">{text.appName}</h1>
+    <div className="app-shell">
+      <header className="app-toolbar">
+        {/* Display the project name in the selected language. */}
+        <h1 className="app-title">{text.appName}</h1>
 
-          <div className="app-notices">
-            <p>{text.singleClientWarning}</p>
-            <p>{text.reloadWarning}</p>
-          </div>
+        <div className="app-notices">
+          <p>{text.singleClientWarning}</p>
+          <p>{text.reloadWarning}</p>
+        </div>
 
-          <label htmlFor="language-select">
-            {text.languageLabel}
-          </label>
+        <label htmlFor="language-select">
+          {text.languageLabel}
+        </label>
 
-          <select
-            id="language-select"
-            value={language}
-            onChange={(event) => {
-              const nextLanguage = event.target.value;
+        <select
+          id="language-select"
+          value={language}
+          onChange={(event) => {
+            const nextLanguage = event.target.value;
 
-              // Validate the browser's string value before updating state.
-              if (nextLanguage === 'en' || nextLanguage === 'zh-Hant') {
-                setLanguage(nextLanguage);
-              }
-            }}
-          >
-            <option value="en" lang="en">
-              English
-            </option>
+            // Validate the browser's string value before updating state.
+            if (nextLanguage === 'en' || nextLanguage === 'zh-Hant') {
+              onLanguageChange(nextLanguage);
+            }
+          }}
+        >
+          <option value="en" lang="en">
+            English
+          </option>
 
-            <option value="zh-Hant" lang="zh-Hant">
-              繁體中文
-            </option>
-          </select>
-        </header>
+          <option value="zh-Hant" lang="zh-Hant">
+            繁體中文
+          </option>
+        </select>
+      </header>
 
-        <main className="panel-viewport" aria-label={text.appName}>
-          <div className="folding-panels">
-            {panelIds.map((panelId) => {
-              const isOpen = layout.includes(String(panelId));
-              const title = text.panels[panelId];
-              const action = isOpen ? text.collapse : text.expand;
+      <main className="panel-viewport" aria-label={text.appName}>
+        <div className="folding-panels">
+          {panelIds.map((panelId) => {
+            const isOpen = openPanels.includes(panelId);
+            const title = text.panels[panelId];
+            const action = isOpen ? text.collapse : text.expand;
 
-              const contentId = `panel-content-${panelId}`;
-              const titleId = `panel-title-${panelId}`;
+            const contentId = `panel-content-${panelId}`;
+            const titleId = `panel-title-${panelId}`;
 
-              return (
-                <section
-                  key={panelId}
-                  className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${panelId === 1 ? 'panel-bulbs' :
-                    panelId === 2 ? 'panel-house' :
-                      'panel-history'
-                    }`}
-                  aria-labelledby={titleId}
-                >
-                  <h2 className="panel-heading">
-                    <button
-                      type="button"
-                      className="panel-toggle"
-                      aria-expanded={isOpen}
-                      aria-controls={contentId}
-                      aria-label={`${action} ${title}`}
-                      onClick={() => togglePanel(panelId)}
-                    >
-                      <span id={titleId} className="panel-title">
-                        {title}
-                      </span>
-
-                      {panelId === 3 && isOpen && (
-                        <HistoryLiveHeader
-                          language={language}
-                          timeline={timeline}
-                        />
-                      )}
-
-                      <span className="panel-action" aria-hidden="true">
-                        {action}
-                      </span>
-                    </button>
-                  </h2>
-
-                  <div
-                    id={contentId}
-                    className="panel-content"
+            return (
+              <section
+                key={panelId}
+                className={`panel ${isOpen ? 'is-open' : 'is-collapsed'} ${panelId === 1
+                  ? 'panel-bulbs'
+                  : panelId === 2
+                    ? 'panel-house'
+                    : panelId === 3
+                      ? 'panel-history'
+                      : 'panel-morse'
+                  }`}
+                aria-labelledby={titleId}
+              >
+                <h2 className="panel-heading">
+                  <button
+                    type="button"
+                    className="panel-toggle"
+                    aria-expanded={isOpen}
+                    aria-controls={contentId}
+                    aria-label={`${action} ${title}`}
+                    onClick={() => {
+                      void togglePanel(panelId);
+                    }}
                   >
-                    {panelId === 1 && (
-                      <BulbPanel
-                        expanded={isOpen}
-                        language={language}
-                        heartbeats={heartbeats}
-                        fullWidth={layout === '1'}
-                        onBulbsChanged={() => {
-                          setBulbRevision((current) => current + 1);
-                        }}
-                      />
-                    )}
+                    <span id={titleId} className="panel-title">
+                      {title}
+                    </span>
 
-                    {panelId === 2 && (
-                      <HousePanel
-                        expanded={isOpen}
-                        language={language}
-                        fullWidth={layout === '2'}
-                        bulbRevision={bulbRevision}
-                        heartbeats={heartbeats}
-                      />
-                    )}
-
-                    {panelId === 3 && (
-                      <HistoryPanel
-                        expanded={isOpen}
+                    {panelId === 3 && isOpen && (
+                      <HistoryLiveHeader
                         language={language}
                         timeline={timeline}
                       />
                     )}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-        </main>
-      </div>
-    </DialogProvider>
+
+                    <span className="panel-action" aria-hidden="true">
+                      {action}
+                    </span>
+                  </button>
+                </h2>
+
+                <div
+                  id={contentId}
+                  className="panel-content"
+                >
+                  {panelId === 1 && (
+                    <BulbPanel
+                      expanded={isOpen}
+                      language={language}
+                      heartbeats={heartbeats}
+                      fullWidth={layout === '1'}
+                      onBulbsChanged={() => {
+                        setBulbRevision((current) => current + 1);
+                      }}
+                    />
+                  )}
+
+                  {panelId === 2 && (
+                    <HousePanel
+                      expanded={isOpen}
+                      language={language}
+                      fullWidth={layout === '2'}
+                      bulbRevision={bulbRevision}
+                      heartbeats={heartbeats}
+                    />
+                  )}
+
+                  {panelId === 3 && (
+                    <HistoryPanel
+                      expanded={isOpen}
+                      language={language}
+                      timeline={timeline}
+                    />
+                  )}
+
+                  {panelId === 4 && (
+                    <MorsePanel
+                      expanded={isOpen}
+                      language={language}
+                    />
+                  )}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </main>
+    </div>
   );
 }

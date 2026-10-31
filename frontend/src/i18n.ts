@@ -8,6 +8,7 @@ export const appText = {
     languageLabel: 'Language',
     expand: 'Expand',
     collapse: 'Collapse',
+    chooseNextPanel: 'At least one tab must stay open. Choose another tab to open before closing this one.',
     singleClientWarning:
       'Use only one tab or window for this PoC to avoid interference.',
     reloadWarning:
@@ -16,6 +17,7 @@ export const appText = {
       1: 'Bulbs',
       2: 'House',
       3: 'History',
+      4: 'Morse',
     },
   },
   'zh-Hant': {
@@ -23,6 +25,7 @@ export const appText = {
     languageLabel: '語言',
     expand: '展開',
     collapse: '收合',
+    chooseNextPanel: '至少需要保留一個展開的分頁。請選擇下一個要開啟的分頁，才會收合目前的分頁。',
     singleClientWarning:
       '此 PoC 請只開啟一個分頁或視窗，避免干擾燈泡模擬。',
     reloadWarning:
@@ -31,6 +34,7 @@ export const appText = {
       1: '燈泡',
       2: '屋子',
       3: '歷史',
+      4: '摩斯密碼',
     },
   },
 };

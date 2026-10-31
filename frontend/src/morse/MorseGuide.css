@@ -1,0 +1,67 @@
+.morse-panel .morse-guide {
+  min-width: 0;
+  max-height: none;
+  padding: 16px;
+  overflow: visible;
+
+  border: 1px solid #d1e0ee;
+  border-radius: 10px;
+  background: #edf4fa;
+
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.morse-panel .morse-guide h3 {
+  margin: 0 0 12px;
+}
+
+.morse-panel .morse-guide h4 {
+  margin: 20px 0 8px;
+}
+
+.morse-panel .morse-timing {
+  margin: 16px 0;
+}
+
+.morse-panel .morse-timing > div {
+  padding: 8px 0;
+  border-bottom: 1px solid #d1e0ee;
+}
+
+.morse-panel .morse-guide dt {
+  font-weight: 600;
+}
+
+.morse-panel .morse-guide dd {
+  margin: 0;
+}
+
+.morse-panel .morse-alphabet {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px 20px;
+}
+
+.morse-panel .morse-alphabet > div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.morse-panel .morse-alphabet dt {
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.morse-panel .morse-alphabet dd,
+.morse-panel .morse-example {
+  font-family: monospace;
+  font-size: 18px;
+  letter-spacing: 0.15em;
+}
+
+.morse-panel .morse-footnote {
+  color: #506b85;
+  font-size: 12px;
+}

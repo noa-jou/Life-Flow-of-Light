@@ -1,11 +1,19 @@
 import { createContext, useContext } from 'react';
 
+export type DialogOption = {
+  value: string;
+  label: string;
+};
+
 type DialogActions = {
   ask: (message: string) => Promise<boolean>;
   inform: (message: string) => Promise<boolean>;
+  choose: (
+    message: string,
+    options: DialogOption[],
+  ) => Promise<string | null>;
 };
 
-// Components inside the provider can access the same dialog.
 export const DialogContext = createContext<DialogActions | null>(null);
 
 export function useDialog(): DialogActions {
