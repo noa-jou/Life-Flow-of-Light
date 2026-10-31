@@ -224,6 +224,7 @@ function AppContent({
                       expanded={isOpen}
                       language={language}
                       timeline={timeline}
+                      bulbRevision={bulbRevision}
                     />
                   )}
 

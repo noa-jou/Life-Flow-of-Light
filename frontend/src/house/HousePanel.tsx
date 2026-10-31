@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { Language } from '../i18n';
+
 import floorPlan from '../assets/Floor-Plan.png';
+import frontGarden from '../assets/front_garden.png';
+import backGarden from '../assets/back_garden.png';
+
 import { houseText } from './house-text';
 import { getBulbs } from '../bulb/bulb-api';
 import type { Bulb } from '../bulb/bulb-api';
 import type { useBulbHeartbeats } from './useBulbHeartbeats';
 import MorseButton from './MorseButton';
+
 
 import './HousePanel.css';
 
@@ -29,6 +34,8 @@ type Inventory = {
 // These dimensions match the original image.
 const IMAGE_WIDTH = 1007;
 const IMAGE_HEIGHT = 951;
+// Reserve space on each side of the house in the full-width view.
+const GARDEN_WIDTH = 300;
 
 const BUTTON_SIZE = 76;
 
@@ -126,8 +133,14 @@ export default function HousePanel({
     // Use landscape in full width and portrait in half width.
     const portrait = !fullWidth;
 
-    const drawingWidth = portrait ? IMAGE_HEIGHT : IMAGE_WIDTH;
+    const drawingWidth = portrait
+        ? IMAGE_HEIGHT
+        : IMAGE_WIDTH + GARDEN_WIDTH * 2;
+
     const drawingHeight = portrait ? IMAGE_WIDTH : IMAGE_HEIGHT;
+
+    // Extend the scene to the left without moving the house coordinates.
+    const drawingLeft = portrait ? 0 : -GARDEN_WIDTH;
 
     function toggleLight(room: Room) {
         const status = lights[room];
@@ -252,12 +265,34 @@ export default function HousePanel({
                 <div className="house-drawing">
                     <svg
                         className="house-floor-plan"
-                        viewBox={`0 0 ${drawingWidth} ${drawingHeight}`}
+                        viewBox={`${drawingLeft} 0 ${drawingWidth} ${drawingHeight}`}
                         preserveAspectRatio="xMidYMid meet"
                         role="group"
                         aria-label={text.floorPlan}
                     >
                         <title>{text.floorPlan}</title>
+
+                        {fullWidth && (
+                            <g aria-hidden="true" pointerEvents="none">
+                                <image
+                                    href={frontGarden}
+                                    x={-GARDEN_WIDTH}
+                                    y={0}
+                                    width={GARDEN_WIDTH}
+                                    height={IMAGE_HEIGHT}
+                                    preserveAspectRatio="xMaxYMid meet"
+                                />
+
+                                <image
+                                    href={backGarden}
+                                    x={IMAGE_WIDTH}
+                                    y={0}
+                                    width={GARDEN_WIDTH}
+                                    height={IMAGE_HEIGHT}
+                                    preserveAspectRatio="xMinYMid meet"
+                                />
+                            </g>
+                        )}
 
                         {/* Rotate only the image. The buttons remain upright. */}
                         <image

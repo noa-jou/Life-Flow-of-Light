@@ -1253,3 +1253,617 @@ A confirmation dialog looked like a small interface detail, but it interrupted t
 Sharing state and using a non-blocking page dialog helped the parts work together.
 
 The next major feature is the History panel.
+
+不用心虛，這幾天你一直在實作、測試，也重新思考使用者要怎麼操作。現在補寫，反而能把「為什麼改」一起記錄下來。
+
+我讀完了，原文停在 **第 40 節，History 還沒開始**。以下可以直接接在檔案最後。我用今天作為整理日期，不替每項工作猜測完成日期，也會說明哪些舊設計已經改變。
+
+---
+
+## 41. Progress update — 31 October 2026
+
+This update covers the work since my previous notes.
+
+The frontend now has four panels:
+
+1. Bulbs
+2. House
+3. History
+4. Morse
+
+History now displays real lighting records from the backend. It also shows a live timeline.
+
+Morse has its own panel and learning guide. Its search interface is still future work.
+
+House now has two different controls:
+
+- When expanded, clicking a switch turns the light on or off.
+- When collapsed, holding a button turns the light on. Releasing it turns the light off.
+
+The full-width House view now includes a front garden and a back garden.
+
+I tested changes in small steps and reported the results before continuing.
+
+### Changes to earlier notes
+
+Some earlier sections describe designs that we have now replaced:
+
+| Earlier design | Current design |
+| --- | --- |
+| Three panels | Four panels, including Morse |
+| A fixed transition table | An array that remembers the open panels |
+| Closing the last panel opens other panels automatically | A dialog asks which panel to open next |
+| Collapsing House does not stop its lights | Collapsing House stops all its lights |
+| Morse guides appear beside the floor plan | Morse guides live in the Morse panel |
+| House keeps one orientation | Half-width is portrait; full-width is landscape |
+| Dialog files live in `components/` | Dialog files live in `dialog/` |
+| History is future work | History displays lighting records |
+
+The earlier notes are still useful as a record of how the project developed.
+
+## 42. Small fixes that improved the interface
+
+Before building History, we improved two details in Bulbs.
+
+The serial number is useful for reference, but it takes up space. We hid that column when Bulbs is half-width and kept it visible when fully expanded.
+
+This changes what the interface displays. It does not remove the serial number from the data.
+
+We also fixed an old uninstall warning that kept appearing again.
+
+After a blocked uninstall attempt, turning the light off should clear that warning. Turning it on later should not bring back the old warning automatically.
+
+I learned that an error message also has a lifecycle:
+
+1. An action causes the warning.
+2. The user changes the situation.
+3. The interface clears the warning when it is no longer relevant.
+
+A warning should describe the current situation, not remain forever because something happened earlier.
+
+## 43. Turning House into a Morse input device
+
+The collapsed House panel now contains three momentary buttons.
+
+A momentary button stays active only while it is held.
+
+The intended behavior is:
+
+| Action | Result |
+| --- | --- |
+| Point at an available button | Show an open-hand cursor |
+| Press and hold | Start sending heartbeats |
+| Release, even over the same button | Stop sending heartbeats |
+| Try a position without a bulb | Do not start |
+
+The implementation also handles keyboard input and cleanup when interaction is interrupted.
+
+We used pointer capture to help track a press even when the pointer moves outside the button.
+
+I learned that `onClick` is not enough for every interaction.
+
+A toggle needs to know that a click happened. A momentary control needs to know when pressing starts and ends.
+
+### Collapsing House
+
+When House changes from expanded to collapsed, App stops all three lights.
+
+Changing House from half-width to full-width does not stop them.
+
+Once House is collapsed, the user can start a new signal by holding one of its buttons.
+
+This separates two actions:
+
+- Entering the collapsed layout resets the lights.
+- Using the collapsed controls creates new signals.
+
+## 44. Building the live lighting timeline
+
+History now shows a live timeline for the three positions.
+
+Each cell represents one second:
+
+- Pale blue means no light was observed during that second.
+- Gold means the light was on at some point during that second.
+
+A short flash should still leave a gold cell. We should not only check the light at one exact instant and miss everything between checks.
+
+When the light turns off, new cells return to blue. Earlier gold cells remain and move through the timeline.
+
+The local clock shows hours, minutes, and seconds.
+
+The two layouts use different directions:
+
+| Layout | Newest cell | Older cells move |
+| --- | --- | --- |
+| Collapsed, vertical | Top | Down |
+| Expanded header, horizontal | Left | Right |
+
+This live strip is different from the historical Gantt chart. The Gantt chart always shows earlier times on the left and later times on the right.
+
+### Sharing the timeline
+
+App calls the live timeline Hook and passes its result to the displays.
+
+This lets the collapsed timeline and expanded header use the same recent history.
+
+I learned again that sharing a Hook’s result is different from calling the Hook separately in several components.
+
+The live timeline is temporary frontend data. It is not a replacement for the database history, and reloading resets it.
+
+## 45. Designing History around questions
+
+The History panel helps users compare lighting behavior.
+
+The controls are:
+
+- From: the first date.
+- To: the last date.
+- By: Day or Position.
+
+The default range starts three days before today and ends today. This includes four calendar dates.
+
+The inputs accept dates, not times.
+
+There are two ways to arrange the same records.
+
+### By Day
+
+Each chart represents one date.
+
+- Chart title: the date.
+- Y-axis: Living Room, Bedroom, and Bathroom.
+- X-axis: the 24 hours of that day.
+
+### By Position
+
+There are three charts, one for each position.
+
+- Chart title: the position.
+- Y-axis: the selected dates.
+- X-axis: the 24 hours of a day.
+
+Changing the grouping changes the presentation. It does not require a different set of lighting records.
+
+The date-order button also depends on the grouping:
+
+- By Day: reverse the order of the charts.
+- By Position: reverse the date rows inside each chart.
+
+The order of the three positions stays fixed.
+
+## 46. Rejecting an invalid date change
+
+History loads data when the date range changes. It does not have a Search button.
+
+Therefore, we must reject an invalid range before saving it into state.
+
+The handler follows this order:
+
+1. Read the proposed input.
+2. Build the proposed date range.
+3. Check whether From is after To.
+4. If invalid, show the shared dialog and return.
+5. Otherwise, update the date state.
+
+The previous valid range stays selected after a rejected change.
+
+I learned that showing an error is not the same as preventing an invalid state.
+
+A controlled input gets its displayed value from React state. Keeping the valid state also keeps the valid value on screen.
+
+## 47. Local dates and backend timestamps
+
+Users choose dates in their local timezone.
+
+The backend receives timestamps representing exact moments.
+
+For the historical query, we calculate:
+
+- Start: local midnight at the beginning of From.
+- End: local midnight immediately after To.
+
+For example, selecting 28–31 October includes the whole of 31 October by using 1 November at midnight as the end boundary.
+
+The end boundary is exclusive: the next day itself is not part of the selected range.
+
+JavaScript’s `getTime()` converts a Date into milliseconds since the Unix epoch. We do not manually subtract eight hours.
+
+I learned to distinguish:
+
+- A local calendar date.
+- A local date and time.
+- A timestamp sent to the backend.
+- A formatted date shown to the user.
+
+They are related, but they are not interchangeable.
+
+## 48. Loading historical records safely
+
+History requests lighting sessions for all three positions.
+
+We separated the work into files with different responsibilities:
+
+| File | Responsibility |
+| --- | --- |
+| `history-api.ts` | Send requests and check the response data |
+| `useHistorySessions.ts` | Manage loading, results, errors, and cancellation |
+| `history-dates.ts` | Prepare dates and query boundaries |
+| `history-bars.ts` | Convert sessions into chart positions |
+| `HistoryGantt.tsx` | Render the charts |
+| `HistoryScroll.tsx` | Manage horizontal scrolling |
+
+The requests for the three positions can run together using `Promise.all`.
+
+We also use `AbortController` and checks for outdated results.
+
+If the user changes dates quickly, an older response should not replace the result for the latest selection.
+
+### Empty results are not errors
+
+A successful query may return no sessions.
+
+Dates outside the available records still appear as empty chart rows. The interface does not need a warning saying when the database has data.
+
+However, an empty chart only tells us that no lighting record was returned. It does not prove that a real room was dark.
+
+A failed request is different. It needs an error message rather than an empty chart that looks successful.
+
+## 49. Turning lighting sessions into bars
+
+A lighting session has a start time and a last-seen time.
+
+To draw it on a daily chart, we calculate:
+
+- Where the bar starts within that day.
+- How much of the day the bar covers.
+
+These values become percentages of the timeline width.
+
+If a session crosses midnight, each daily chart shows only the part belonging to that date.
+
+Very short sessions receive a minimum visible width so they can still be noticed.
+
+That minimum width is a display choice. It does not change the recorded timestamps.
+
+I also learned that `last_seen_at` is the time of the last heartbeat. It is not an exact measurement of when someone released a switch.
+
+The chart should not silently invent more precise data than the backend provides.
+
+## 50. Making zoom useful
+
+At first, zoom made the chart wider, but the time labels were too far apart.
+
+A user could see a bar without knowing which time it represented.
+
+We changed the time ticks so they become more detailed as the chart zooms in:
+
+| Zoom | Time between ticks |
+| --- | --- |
+| 1× | 4 hours |
+| 2× | 2 hours |
+| 4× | 1 hour |
+| 8× | 30 minutes |
+| 16× | 15 minutes |
+
+We also removed the record-count message. It was less useful than the controls.
+
+The zoom and date-order buttons now sit together on a separate row, aligned to the left.
+
+I learned that a feature can work technically and still be difficult to use.
+
+Zoom needs enough time labels and position information to help the user understand the enlarged view.
+
+## 51. Keeping scrolling visible and stable
+
+The browser’s horizontal scrollbar could disappear until it was used.
+
+We added a visible horizontal range control above each chart and a label showing the visible time range.
+
+We hid the lower native scrollbar so there would not be two competing controls.
+
+The top control and the chart’s actual scroll position stay connected.
+
+### Preserving position during zoom
+
+Changing zoom originally moved the user away from the part they were examining.
+
+We now remember the relative position within the available horizontal scroll range.
+
+After zoom changes, we restore the corresponding position.
+
+This preserves the relative scrolling position. It is not the same as pinning one exact timestamp under the pointer.
+
+This work introduced several browser and React tools:
+
+| Tool | Why we used it |
+| --- | --- |
+| `useRef` | Remember the scroll ratio and access the viewport |
+| `useLayoutEffect` | Adjust the layout before the browser paints |
+| `ResizeObserver` | Detect changes to the available size |
+| `requestAnimationFrame` | Schedule measurements with browser rendering |
+
+I learned that zoom and scrolling must be designed together.
+
+## 52. Giving Morse its own panel
+
+We originally planned to place Morse searching beside History.
+
+Later, I decided it needed its own panel.
+
+The intended learning layout is:
+
+- Bulbs collapsed.
+- House collapsed, with its hold-to-light buttons.
+- History half open, showing live feedback.
+- Morse half open, showing instructions.
+
+The user can read the guide, press a House button, and watch the signal appear in History.
+
+This gives each panel a clear role.
+
+We moved `MorseGuide.tsx` from `house/` to `morse/`.
+
+Morse text now lives in `morse-text.ts`, while `Language` remains a shared type in `i18n.ts`.
+
+We also changed the guide’s wording from “click once, then click again” to “hold, then release.”
+
+Moving a component is not only a file operation. Its instructions must still match how the feature works.
+
+The guide and A–Z reference are available now. A more direct SOS walkthrough and the historical message search are still unfinished.
+
+## 53. Replacing the fixed transition table
+
+With four panels, the old table of layout combinations became less convenient.
+
+We replaced it with an array:
+
+```tsx
+const [openPanels, setOpenPanels] = useState<PanelId[]>([2, 3]);
+```
+
+The array records both:
+
+- Which panels are open.
+- Which one was opened earlier.
+
+When a third panel opens, the earlier-opened panel closes.
+
+For example:
+
+```text
+[2, 3] → open 4 → [3, 4]
+```
+
+The display order still stays Bulbs, House, History, Morse. The array’s order tracks opening history, not screen position.
+
+When two panels are open, either one can close normally.
+
+When only one is open, clicking Collapse opens a dialog asking which other panel should open next.
+
+Cancelling leaves the current layout and lights unchanged.
+
+We calculate the next layout first, then stop House’s lights only if House is actually going to close.
+
+## 54. Extending the shared dialog
+
+The dialog now supports three actions:
+
+| Action | Result |
+| --- | --- |
+| `ask()` | `true` or `false` |
+| `inform()` | A boolean when the dialog finishes |
+| `choose()` | The selected string, or `null` when cancelled |
+
+Each choice has:
+
+- `value`: the value used by the program.
+- `label`: the text displayed to the user.
+
+The dialog uses a `kind` field to decide which buttons to render.
+
+This is an example of a TypeScript union: different dialog kinds can carry different information.
+
+The existing confirmation and notification functions remain available.
+
+### Placing AppContent inside the Provider
+
+AppContent needs to call `useDialog()` for panel switching.
+
+We therefore separated the structure:
+
+```text
+App
+  DialogProvider
+    AppContent
+```
+
+App owns the language state and passes it down.
+
+A component using Context must be inside the matching Provider.
+
+During this change, I accidentally kept another `language` state declaration inside AppContent. TypeScript reported a duplicate identifier.
+
+The fix was to remove the duplicate state and use the language received through props.
+
+I learned to decide where a value is owned before adding another copy of it.
+
+## 55. Finding a CSS conflict
+
+After moving the Morse guides, the full-width House image became very small and stayed on the left.
+
+The rotation worked correctly. The size did not.
+
+The cause was an old three-column layout still inside `App.css`.
+
+That rule reserved columns for:
+
+1. The alphabet guide.
+2. The house.
+3. The instructions.
+
+The guides were gone, but their old layout rule remained.
+
+We initially added replacement rules in `HousePanel.css`. However, the old rule used the same selector and could win because of stylesheet order.
+
+The final fix was to remove the obsolete rule.
+
+We also removed old House and Morse styles from `App.css`.
+
+The responsibilities are now clearer:
+
+| File | Responsibility |
+| --- | --- |
+| `App.css` | Page shell and folding panels |
+| `HousePanel.css` | House drawing and light controls |
+| `MorseGuide.css` | Morse learning content |
+
+I learned that CSS from different files still participates in the same page.
+
+Putting a rule in a component’s CSS file does not automatically isolate it.
+
+Before adding another override, I should search for existing rules using the same class.
+
+## 56. Adding the front and back gardens
+
+With the guides moved, the full-width House had room for a more natural setting.
+
+We added two generated image assets:
+
+```text
+src/assets/front_garden.png
+src/assets/back_garden.png
+```
+
+The current arrangement is:
+
+- Front garden on the left.
+- House in the center, with its entrance on the left.
+- Back garden on the right.
+
+The gardens appear only when House is fully expanded.
+
+The half-width view keeps the portrait floor plan without gardens.
+
+### One shared SVG coordinate system
+
+We placed both gardens inside the existing SVG.
+
+Instead of moving the house and recalculating every switch, we extended the `viewBox` to include space on both sides.
+
+The front garden uses a negative x-coordinate.
+
+A negative coordinate is valid. It means the drawing includes space to the left of the original origin.
+
+The house keeps its original coordinates, and the buttons continue to use the room positions.
+
+`preserveAspectRatio` keeps the images in proportion.
+
+The gardens are decorative, so they use:
+
+```tsx
+aria-hidden="true"
+pointerEvents="none"
+```
+
+They do not become extra controls or intercept the light buttons.
+
+I tested the combined view and confirmed that the gardens, house, and switches displayed correctly.
+
+## 57. Using errors and tests to guide the work
+
+Several errors helped us find incomplete changes.
+
+### Running npm from the wrong directory
+
+Running the frontend commands from the repository root produced an `ENOENT` error because there was no `package.json` there.
+
+The commands belong in:
+
+```bash
+cd ~/Life-Flow-of-Light/frontend
+npm run build
+npm run lint
+```
+
+### Leaving obsolete code behind
+
+After adding the fourth panel, the old `transitions` table caused errors:
+
+- It was no longer used.
+- Its type expected a fourth panel entry that the old table did not contain.
+
+We removed the old table and its `Layout` type.
+
+We did not add more entries to a structure the application no longer needed.
+
+### Different checks answer different questions
+
+| Check | What it helps verify |
+| --- | --- |
+| TypeScript/build | Types, imports, and production compilation |
+| Lint | Configured code-quality rules |
+| Browser testing | Appearance and interaction |
+| Network inspection | Requests and responses |
+| Database inspection | Stored records |
+
+A successful build cannot tell me whether a floor plan is too small.
+
+A screenshot cannot tell me whether a backend request succeeded.
+
+I need to choose the check that matches the question.
+
+## 58. Current status and next work
+
+The frontend now includes:
+
+- Bulb management and uninstall protection.
+- Shared dialogs.
+- Four folding panels.
+- Expanded House switches and collapsed momentary controls.
+- A live lighting timeline.
+- Historical Gantt charts grouped by day or position.
+- Date validation, zoom, sorting, and visible scrolling controls.
+- A separate Morse guide.
+- A full-width House scene with front and back gardens.
+
+The Morse search is not connected yet.
+
+The planned search will include:
+
+- Its own date and time range, including seconds.
+- A Find button.
+- Conversion from local input to backend timestamps.
+- Results showing Local Time, Position, and Message.
+- Full start and end times for each message.
+- A control for reversing time order.
+- Column headings that remain visible when there is no data.
+
+History also does not yet automatically refresh its fetched records whenever a new live signal is created. The live strip and historical query have different jobs.
+
+Before calling the whole PoC finished, I still need to test the complete flow from sending a Morse message to finding it in the stored history.
+
+## 59. What I learned from this stage
+
+I am learning to think about more than the next line of code.
+
+I now ask:
+
+- Who owns this state?
+- Is this live information or a stored record?
+- Should this value be saved, or calculated from existing state?
+- Can an older request overwrite a newer result?
+- Does the instruction match the actual control?
+- Is an old CSS rule still affecting the screen?
+- Did I remove the old implementation after replacing it?
+- Can the user understand what happened without reading the code?
+
+Some of the most useful changes came from trying the interface myself.
+
+I noticed that warnings stayed too long, scrollbars were hard to find, zoom moved me away from the record, and Morse teaching was in the wrong place.
+
+These observations became requirements, then code changes, then another round of testing.
+
+I do not understand every part immediately. These notes help me return to the reasons behind the code.
+
+The project is becoming something I can use, question, and improve—not only something I can build.

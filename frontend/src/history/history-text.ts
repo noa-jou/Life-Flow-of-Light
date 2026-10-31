@@ -22,6 +22,7 @@ export const historyText = {
     zoomOut: 'Zoom out',
     visibleTime: 'Visible time',
     scrollTimeline: 'Scroll timeline horizontally',
+    bulb: 'Bulb',
   },
   'zh-Hant': {
     living_room: '客廳',
@@ -46,5 +47,6 @@ export const historyText = {
     zoomOut: '縮小',
     visibleTime: '可見時間',
     scrollTimeline: '水平捲動時間軸',
+    bulb: '燈泡',
   },
 };

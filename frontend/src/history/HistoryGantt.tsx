@@ -4,12 +4,14 @@ import { getSessionBar } from './history-bars';
 import { historyText } from './history-text';
 import './HistoryGantt.css';
 import HistoryScroll from './HistoryScroll';
+import type { Bulb } from '../bulb/bulb-api';
 
 type Props = {
   language: Language;
   dates: string[];
   groupBy: 'day' | 'position';
   sessions: LightSession[];
+  bulbs: Bulb[];
   zoom: number;
 };
 
@@ -20,10 +22,16 @@ export default function HistoryGantt({
   dates,
   groupBy,
   sessions,
+  bulbs,
   zoom,
 }: Props) {
 
   const text = historyText[language];
+
+  // Look up the current bulb name using the ID saved in each session.
+  const bulbNames = new Map(
+    bulbs.map((bulb) => [bulb.id, bulb.name]),
+  );
 
   // Keep tick spacing readable as the timeline grows wider.
   const tickMinutes = 240 / zoom;
@@ -137,8 +145,15 @@ export default function HistoryGantt({
 
                         if (bar === null) return null;
 
+                        const bulbName = bulbNames.get(session.bulb_id);
+
+                        const bulbLabel =
+                          bulbName === undefined
+                            ? `${text.bulb} #${session.bulb_id}`
+                            : `${text.bulb}: ${bulbName}`;
+
                         const description =
-                          `${text[row.position]}: ` +
+                          `${bulbLabel} — ${text[row.position]}\n` +
                           `${formatTime(session.started_at)} → ` +
                           `${formatTime(session.last_seen_at)}`;
 

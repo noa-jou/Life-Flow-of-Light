@@ -2,7 +2,9 @@ import type { Language } from '../i18n';
 import { historyText } from './history-text';
 import type { useLiveTimeline } from './useLiveTimeline';
 import './HistoryPanel.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getBulbs } from '../bulb/bulb-api';
+import type { Bulb } from '../bulb/bulb-api';
 import {
   createDefaultDateRange,
   getDatesInRange,
@@ -15,6 +17,7 @@ type Props = {
   expanded: boolean;
   language: Language;
   timeline: ReturnType<typeof useLiveTimeline>;
+  bulbRevision: number;
 };
 
 type GroupBy = 'day' | 'position';
@@ -29,6 +32,7 @@ export default function HistoryPanel({
   expanded,
   language,
   timeline,
+  bulbRevision,
 }: Props) {
   const text = historyText[language];
   const { inform } = useDialog();
@@ -37,6 +41,29 @@ export default function HistoryPanel({
   const [groupBy, setGroupBy] = useState<GroupBy>('day');
   const [newestFirst, setNewestFirst] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  const [bulbs, setBulbs] = useState<Bulb[]>([]);
+
+  useEffect(() => {
+    if (!expanded) return;
+
+    const controller = new AbortController();
+
+    getBulbs(controller.signal)
+      .then((items) => {
+        if (controller.signal.aborted) return;
+
+        setBulbs(items);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+
+        // Keep the history usable with bulb IDs if names cannot be loaded.
+        setBulbs([]);
+      });
+
+    return () => controller.abort();
+  }, [expanded, bulbRevision, dateRange.from, dateRange.to]);
 
   function changeDate(field: 'from' | 'to', value: string) {
     // Keep the current range when the input is empty or incomplete.
@@ -183,13 +210,14 @@ export default function HistoryPanel({
         )}
 
         {!loading && !failed && (
-            <HistoryGantt
-              language={language}
-              dates={orderedDates}
-              groupBy={groupBy}
-              sessions={sessions}
-              zoom={zoom}
-            />
+          <HistoryGantt
+            language={language}
+            dates={orderedDates}
+            groupBy={groupBy}
+            sessions={sessions}
+            bulbs={bulbs}
+            zoom={zoom}
+          />
         )}
       </div>
     );
