@@ -74,17 +74,17 @@
 }
 
 .history-expanded {
-  padding: 28px 16px 16px;
+    padding: 28px 16px 16px;
 }
 
 .history-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  overflow-x: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow-x: auto;
 
-  /* Leave room for focus outlines inside the scroll area. */
-  padding: 6px 6px 8px;
+    /* Leave room for focus outlines inside the scroll area. */
+    padding: 6px 6px 8px;
 }
 
 .history-filters {
@@ -127,4 +127,52 @@
     margin: 8px 0;
     color: #a12622;
     font-size: 13px;
+}
+
+.history-toolbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 6px;
+}
+
+.history-tool-button {
+    padding: 6px 10px;
+    border: 1px solid #b8cde0;
+    border-radius: 6px;
+    background: #fff;
+    color: #315f88;
+    font: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.history-tool-button:hover {
+    background: #e3edf5;
+}
+
+.history-tool-button:focus-visible {
+    outline: 3px solid #315f88;
+    outline-offset: 2px;
+}
+
+.history-tool-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.history-tool-button:disabled:hover {
+    background: #fff;
+}
+
+.history-zoom-value {
+    min-width: 32px;
+    text-align: center;
+    color: #315f88;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
 }

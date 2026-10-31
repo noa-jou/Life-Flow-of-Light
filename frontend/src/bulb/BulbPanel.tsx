@@ -15,7 +15,7 @@ import type { Bulb, Position } from './bulb-api';
 import { bulbText } from './bulb-text';
 import type { Language } from '../i18n';
 import type { useBulbHeartbeats } from '../house/useBulbHeartbeats';
-import { useDialog } from '../components/dialog-context';
+import { useDialog } from '../dialog/dialog-context';
 
 import './BulbPanel.css';
 

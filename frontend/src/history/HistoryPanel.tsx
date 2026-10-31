@@ -3,7 +3,13 @@ import { historyText } from './history-text';
 import type { useLiveTimeline } from './useLiveTimeline';
 import './HistoryPanel.css';
 import { useState } from 'react';
-import { createDefaultDateRange } from './history-dates';
+import {
+  createDefaultDateRange,
+  getDatesInRange,
+} from './history-dates';
+import HistoryGantt from './HistoryGantt';
+import { useDialog } from '../dialog/dialog-context';
+import { useHistorySessions } from './useHistorySessions';
 
 type Props = {
   expanded: boolean;
@@ -25,14 +31,40 @@ export default function HistoryPanel({
   timeline,
 }: Props) {
   const text = historyText[language];
+  const { inform } = useDialog();
 
   const [dateRange, setDateRange] = useState(createDefaultDateRange);
   const [groupBy, setGroupBy] = useState<GroupBy>('day');
+  const [newestFirst, setNewestFirst] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
-  const invalidDateRange =
-    dateRange.from !== '' &&
-    dateRange.to !== '' &&
-    dateRange.from > dateRange.to;
+  function changeDate(field: 'from' | 'to', value: string) {
+    // Keep the current range when the input is empty or incomplete.
+    if (!value) return;
+
+    const nextRange = {
+      ...dateRange,
+      [field]: value,
+    };
+
+    // Reject the change before updating state.
+    if (nextRange.from > nextRange.to) {
+      void inform(text.invalidDateRange);
+      return;
+    }
+
+    setDateRange(nextRange);
+  }
+
+
+  const dates = getDatesInRange(dateRange.from, dateRange.to);
+
+  const orderedDates = newestFirst ? [...dates].reverse() : dates;
+
+  const { sessions, loading, failed } = useHistorySessions(
+    dateRange.from,
+    dateRange.to,
+  );
 
   // The clock and the top cell use the same second.
   const localTime = new Date(
@@ -59,17 +91,8 @@ export default function HistoryPanel({
                 type="date"
                 value={dateRange.from}
                 required
-                aria-invalid={invalidDateRange}
-                aria-describedby={
-                  invalidDateRange ? 'history-date-error' : undefined
-                }
                 onChange={(event) => {
-                  const from = event.target.value;
-
-                  setDateRange((current) => ({
-                    ...current,
-                    from,
-                  }));
+                  changeDate('from', event.target.value);
                 }}
               />
             </label>
@@ -81,17 +104,8 @@ export default function HistoryPanel({
                 type="date"
                 value={dateRange.to}
                 required
-                aria-invalid={invalidDateRange}
-                aria-describedby={
-                  invalidDateRange ? 'history-date-error' : undefined
-                }
                 onChange={(event) => {
-                  const to = event.target.value;
-
-                  setDateRange((current) => ({
-                    ...current,
-                    to,
-                  }));
+                  changeDate('to', event.target.value);
                 }}
               />
             </label>
@@ -116,14 +130,66 @@ export default function HistoryPanel({
           </div>
         </div>
 
-        {invalidDateRange && (
-          <p
-            id="history-date-error"
-            className="history-date-error"
-            role="alert"
+        <div className="history-toolbar-actions">
+
+          <button
+            type="button"
+            className="history-tool-button"
+            aria-label={text.zoomOut}
+            title={text.zoomOut}
+            disabled={zoom === 1}
+            onClick={() => {
+              setZoom((current) => Math.max(1, current / 2));
+            }}
           >
-            {text.invalidDateRange}
-          </p>
+            −
+          </button>
+
+          <span className="history-zoom-value">{zoom}×</span>
+
+          <button
+            type="button"
+            className="history-tool-button"
+            aria-label={text.zoomIn}
+            title={text.zoomIn}
+            disabled={zoom === 16}
+            onClick={() => {
+              setZoom((current) => Math.min(16, current * 2));
+            }}
+          >
+            +
+          </button>
+
+          <button
+            type="button"
+            className="history-tool-button"
+            title={text.reverseDateOrder}
+            onClick={() => {
+              setNewestFirst((current) => !current);
+            }}
+          >
+            {newestFirst ? text.newestFirst : text.oldestFirst}
+            {' ↕'}
+          </button>
+
+        </div>
+
+        {loading && (
+          <p role="status">{text.loadingHistory}</p>
+        )}
+
+        {failed && (
+          <p role="alert">{text.historyLoadFailed}</p>
+        )}
+
+        {!loading && !failed && (
+            <HistoryGantt
+              language={language}
+              dates={orderedDates}
+              groupBy={groupBy}
+              sessions={sessions}
+              zoom={zoom}
+            />
         )}
       </div>
     );

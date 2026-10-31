@@ -3,7 +3,7 @@ import BulbPanel from './bulb/BulbPanel';
 import HousePanel from './house/HousePanel';
 import { appText, type Language } from './i18n';
 import { useBulbHeartbeats } from './house/useBulbHeartbeats';
-import DialogProvider from './components/Dialog';
+import DialogProvider from './dialog/Dialog';
 import HistoryPanel from './history/HistoryPanel';
 import { useLiveTimeline } from './history/useLiveTimeline';
 import HistoryLiveHeader from './history/HistoryLiveHeader';
