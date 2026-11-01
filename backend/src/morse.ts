@@ -13,6 +13,8 @@ export interface MorseMessage {
   start_time: number;
   end_time: number;
   message: string;
+  bulb_id: number;
+  position: string;
 }
 
 // These settings match our demo seed.
@@ -102,6 +104,7 @@ export function detectMorse(
       || a.id - b.id
   );
 
+
   // Each inner array will contain the pulses of one possible letter.
   //
   // Keep invalid and long pulses in the data. They act as barriers,
@@ -133,14 +136,8 @@ export function detectMorse(
 
   const results: MorseMessage[] = [];
 
-  // Keep bulb identity internally so different bulbs are never
-  // combined into one message. These extra fields are not returned.
-  let current:
-    | (MorseMessage & {
-        bulb_id: number;
-        position: string;
-      })
-    | undefined;
+  // Keep the source bulb and position with the message.
+  let current: MorseMessage | undefined;
 
   // Save the current message only if its full time range fits
   // inside the requested range.
@@ -157,7 +154,9 @@ export function detectMorse(
       results.push({
         start_time: current.start_time,
         end_time: current.end_time,
-        message: current.message
+        message: current.message,
+        bulb_id: current.bulb_id,
+        position: current.position,
       });
     }
 
@@ -220,7 +219,7 @@ export function detectMorse(
     if (
       next
       && next.started_at - estimatedOff(last)
-        < minimumLetterGap
+      < minimumLetterGap
     ) {
       valid = false;
     }

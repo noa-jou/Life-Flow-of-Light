@@ -138,7 +138,9 @@ for (const example of [
         [{
           start_time: at(2, '21:58:46'),
           end_time: at(2, '22:00:00'),
-          message: 'HELP'
+          message: 'HELP',
+          bulb_id: 2,
+          position: 'bedroom',
         }]
       );
 

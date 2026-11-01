@@ -63,7 +63,9 @@ test('Morse API finds HELP with exact timestamps using the real schema', async t
       result: [{
         start_time: START,
         end_time: end,
-        message: 'HELP'
+        message: 'HELP',
+        bulb_id: 1,
+        position: 'bedroom',
       }]
     });
   }
@@ -136,12 +138,16 @@ test('Morse API preserves word spaces and orders separate messages', async t => 
       {
         start_time: START,
         end_time: end,
-        message: 'HELP ME'
+        message: 'HELP ME',
+        bulb_id: 1,
+        position: 'bedroom',
       },
       {
         start_time: nextStart,
         end_time: nextEnd,
-        message: 'E'
+        message: 'E',
+        bulb_id: 1,
+        position: 'bedroom',
       }
     ]
   });
@@ -166,7 +172,9 @@ test('Morse API waits at 17500 ms of final silence and returns the full message 
       result: [{
         start_time: START,
         end_time: end,
-        message: 'HELP'
+        message: 'HELP',
+        bulb_id: 1,
+        position: 'bedroom',
       }]
     }
   );

@@ -71,7 +71,9 @@ test('decoder recognizes all 26 English letters', () => {
       [{
         start_time: 10_000,
         end_time: cursor - 2_000,
-        message: letter
+        message: letter,
+        bulb_id: 1,
+        position: 'bedroom'
       }],
       letter
     );
@@ -145,12 +147,16 @@ test('decoder never combines different bulbs into one letter or message', () => 
       {
         start_time: 10_000,
         end_time: 12_000,
-        message: 'E'
+        message: 'E',
+        bulb_id: 1,
+        position: 'bedroom'
       },
       {
         start_time: 18_000,
         end_time: 20_000,
-        message: 'E'
+        message: 'E',
+        bulb_id: 2,
+        position: 'bedroom'
       }
     ]
   );
@@ -229,7 +235,9 @@ test('decoder sorts a copy and does not modify the caller’s records', () => {
     [{
       start_time: 10_000,
       end_time: 20_000,
-      message: 'EE'
+      message: 'EE',
+      bulb_id: 1,
+      position: 'bedroom'
     }]
   );
 
