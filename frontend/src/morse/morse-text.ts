@@ -10,7 +10,7 @@ export const morseText = {
         condition: 'Condition',
         from: 'From',
         to: 'To',
-        find: 'Find',
+        find: 'Search',
         localTime: 'Local time',
         position: 'Position',
         bulb: 'Bulb',
@@ -118,17 +118,13 @@ export const lessonText = {
     watch:
       'Watch the live light cells in History. Each cell represents one second. Hold the button to light the bulb; release it to turn it off.',
     timing:
-      'Dot: hold for 2 seconds. Dash: hold for 6 seconds. Between signals within one letter: release for 2 seconds.',
+      'Dot: hold for 2 seconds. \nDash: hold for 6 seconds. \nBetween signals within one letter: release for 2 seconds.',
     letterGap:
       'Between letters in the same word, release for 6 seconds.',
     wordGap:
       'Between words, release for 14 seconds.',
-    noAdding:
-      'Use only the gap required at that boundary. Do not add the 2-second signal gap to a letter or word gap.',
     finish:
       'After the final signal, keep the bulb off for at least 18 seconds before searching.',
-    check:
-      'Set From to before your first signal and To to after your last signal. The search range must be at least one minute long. Click Find to check your message.',
     sosIntro:
       'Send S, then O, then S. Follow the actions below from left to right.',
     lettersIntro:
@@ -156,17 +152,13 @@ export const lessonText = {
     watch:
       '留意 History 的即時燈光格子，每格代表一秒。按住按鈕會亮燈，放開就會關燈。',
     timing:
-      'Dot：按住 2 秒。Dash：按住 6 秒。同一字母內，兩個訊號之間放開 2 秒。',
+      'Dot：按住 2 秒。\nDash：按住 6 秒。\n同一字母內，兩個訊號之間放開 2 秒。',
     letterGap:
       '同一單字內，兩個字母之間放開 6 秒。',
     wordGap:
       '不同單字之間放開 14 秒。',
-    noAdding:
-      '每個交界只使用該處需要的間隔，不要把訊號間的 2 秒再加到字母或單字間隔上。',
     finish:
-      '最後一個訊號結束後，保持關燈至少 18 秒，再進行搜尋。',
-    check:
-      '將 From 設在第一個訊號之前，To 設在最後一個訊號之後，整個搜尋範圍至少一分鐘。按 Find 檢查自己的訊息。',
+      '最後一個訊號結束後，保持關燈至少 18 秒，按 搜尋 檢查自己的訊息。',
     sosIntro:
       '依序傳送 S、O、S，按照下方動作由左至右操作。',
     lettersIntro:

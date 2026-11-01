@@ -82,10 +82,10 @@ test('decoder recognizes all 26 English letters', () => {
 
 test('decoder accepts dot/dash tolerance boundaries and rejects durations just outside them', () => {
   for (const [duration, message] of [
-    [1_500, 'E'],
-    [2_500, 'E'],
-    [4_500, 'T'],
-    [7_500, 'T']
+    [800, 'E'],
+    [3_200, 'E'],
+    [4_800, 'T'],
+    [7_200, 'T']
   ] as const) {
     const result = detectMorse(
       [pulse(1, 10_000, duration)],
@@ -97,7 +97,7 @@ test('decoder accepts dot/dash tolerance boundaries and rejects durations just o
     assert.equal(result[0]?.message, message);
   }
 
-  for (const duration of [1_499, 2_501, 4_499, 7_501]) {
+  for (const duration of [799, 3_201, 4_799, 7_201]) {
     assert.deepEqual(
       detectMorse(
         [pulse(1, 10_000, duration)],
@@ -112,13 +112,13 @@ test('decoder accepts dot/dash tolerance boundaries and rejects durations just o
 
 test('decoder distinguishes symbol, letter, and word gaps at their tolerance boundaries', () => {
   for (const [gap, messages] of [
-    [1_500, ['I']],
-    [2_500, ['I']],
-    [4_500, ['EE']],
-    [7_500, ['EE']],
-    [10_500, ['E E']],
-    [17_500, ['E E']],
-    [17_501, ['E', 'E']]
+    [800, ['I']],
+    [3_200, ['I']],
+    [4_800, ['EE']],
+    [7_200, ['EE']],
+    [12_800, ['E E']],
+    [15_200, ['E E']],
+    [15_201, ['E', 'E']]
   ] as const) {
     const rows = [
       pulse(1, 10_000, 2_000),
@@ -242,4 +242,46 @@ test('decoder sorts a copy and does not modify the caller’s records', () => {
   );
 
   assert.deepEqual(rows, before);
+});
+
+test('decoder recognizes a manually recorded S with timing variation', () => {
+  const sessions: LightSession[] = [
+    {
+      id: 89,
+      bulb_id: 2,
+      position: 'bedroom',
+      started_at: 1793537945037,
+      last_seen_at: 1793537946240,
+    },
+    {
+      id: 90,
+      bulb_id: 2,
+      position: 'bedroom',
+      started_at: 1793537949045,
+      last_seen_at: 1793537950450,
+    },
+    {
+      id: 91,
+      bulb_id: 2,
+      position: 'bedroom',
+      started_at: 1793537953706,
+      last_seen_at: 1793537954705,
+    },
+  ];
+
+  assert.deepEqual(
+    detectMorse(
+      sessions,
+      1793537910000,
+      1793538000000,
+      1793538000000,
+    ),
+    [{
+      start_time: 1793537945037,
+      end_time: 1793537954905,
+      message: 'S',
+      bulb_id: 2,
+      position: 'bedroom',
+    }],
+  );
 });

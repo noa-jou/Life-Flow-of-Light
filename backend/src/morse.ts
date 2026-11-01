@@ -21,7 +21,9 @@ export interface MorseMessage {
 // This version does not automatically detect different sending speeds.
 const HEARTBEAT_MS = 200;
 const UNIT_MS = 2000;
-const TOLERANCE = 0.25;
+
+// Allow one second of human timing variation plus sampling error.
+const TIMING_TOLERANCE_MS = 1000 + HEARTBEAT_MS;
 
 // Standard Morse timing:
 // dot = 1 unit
@@ -32,8 +34,10 @@ const TOLERANCE = 0.25;
 //
 // The longest accepted word gap is 17,500 ms.
 // A longer pause separates two messages.
-export const MESSAGE_GAP_MS =
-  UNIT_MS * 7 * (1 + TOLERANCE);
+
+// Keep the existing end-of-message waiting period.
+// The sender should leave at least 18 seconds of silence.
+export const MESSAGE_GAP_MS = 17_500;
 
 // Translate a complete dot/dash pattern into an English letter.
 const alphabet: Record<string, string> = {
@@ -65,17 +69,16 @@ const alphabet: Record<string, string> = {
   '--..': 'Z'
 };
 
-// Check whether a duration is close enough to the expected duration.
-//
-// Example:
-// matches(2100, 1) checks whether 2,100 ms is close to one unit,
-// which is 2,000 ms. With 25% tolerance, it is accepted.
+// Accept a fixed timing margin around each target duration.
+// 2 seconds: 800–3200 ms
+// 6 seconds: 4800–7200 ms
+// 14 seconds: 12800–15200 ms
 function matches(actual: number, units: number): boolean {
   const expected = UNIT_MS * units;
 
   return (
-    actual >= expected * (1 - TOLERANCE)
-    && actual <= expected * (1 + TOLERANCE)
+    actual >= expected - TIMING_TOLERANCE_MS
+    && actual <= expected + TIMING_TOLERANCE_MS
   );
 }
 
@@ -214,7 +217,7 @@ export function detectMorse(
     // If another group follows, there must be enough darkness
     // to separate the two letters.
     const minimumLetterGap =
-      UNIT_MS * 3 * (1 - TOLERANCE);
+      UNIT_MS * 3 - TIMING_TOLERANCE_MS;
 
     if (
       next

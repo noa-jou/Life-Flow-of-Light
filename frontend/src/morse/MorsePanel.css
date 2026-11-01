@@ -362,6 +362,7 @@
 
 /* Override both full-width layouts when the panel becomes narrow. */
 @container morse-content (max-width: 800px) {
+
     .morse-panel.is-full.has-lesson,
     .morse-panel.is-full:not(.has-lesson) {
         grid-template-columns: minmax(0, 1fr);
@@ -377,16 +378,38 @@
         grid-template-rows: minmax(0, 1fr) auto;
     }
 
-    .morse-panel.is-full.has-lesson > .morse-search,
-    .morse-panel.is-full:not(.has-lesson) > .morse-search {
+    .morse-panel.is-full.has-lesson>.morse-search,
+    .morse-panel.is-full:not(.has-lesson)>.morse-search {
         grid-column: 1;
         grid-row: 1;
     }
 
-    .morse-panel.is-full.has-lesson > .morse-lessons,
-    .morse-panel.is-full:not(.has-lesson) > .morse-lessons {
+    .morse-panel.is-full.has-lesson>.morse-lessons,
+    .morse-panel.is-full:not(.has-lesson)>.morse-lessons {
         grid-column: 1;
         grid-row: 2;
         min-width: 0;
     }
+}
+
+.morse-timing-lines {
+    white-space: pre-line;
+}
+
+.morse-alphabet-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 6px 8px;
+}
+
+.morse-alphabet-item strong {
+    flex: 0 0 24px;
+}
+
+.morse-alphabet-item code {
+    font-family: monospace;
+    font-size: 20px;
+    letter-spacing: 4px;
+    white-space: nowrap;
 }
