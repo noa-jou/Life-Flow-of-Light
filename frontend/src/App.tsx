@@ -232,6 +232,7 @@ function AppContent({
                     <MorsePanel
                       expanded={isOpen}
                       language={language}
+                      fullWidth={layout === '4'}
                     />
                   )}
                 </div>

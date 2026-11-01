@@ -1,10 +1,392 @@
+/* Keep scrolling inside the results and lesson content. */
+.panel-morse.is-open>.panel-heading {
+    flex: 0 0 auto;
+}
+
+.panel-morse.is-open>.panel-content {
+    overflow: hidden;
+    container-type: inline-size;
+    container-name: morse-content;
+}
+
 .morse-panel {
-    padding: 24px 16px;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0;
+    padding: 20px 16px 16px;
     display: grid;
-    gap: 20px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 12px;
+}
+
+.morse-panel.has-lesson {
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* Full width with an open lesson: lessons left, search right. */
+.morse-panel.is-full.has-lesson {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+}
+
+.morse-panel.is-full.has-lesson>.morse-lessons {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.morse-panel.is-full.has-lesson>.morse-search {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+/* Full width without a lesson: search spans both columns. */
+.morse-panel.is-full:not(.has-lesson) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.morse-panel.is-full:not(.has-lesson)>.morse-search {
+    grid-column: 1 / -1;
+    grid-row: 1;
+}
+
+.morse-panel.is-full:not(.has-lesson)>.morse-lessons {
+    grid-column: 1;
+    grid-row: 2;
 }
 
 .morse-description {
     margin: 0;
     line-height: 1.6;
+}
+
+.morse-summary {
+    padding: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.morse-summary-timing {
+    margin: 0;
+}
+
+.morse-summary-timing>div {
+    padding: 10px 0;
+    border-bottom: 1px solid #cbdfee;
+}
+
+.morse-summary-timing dt {
+    font-weight: 600;
+}
+
+.morse-summary-timing dd {
+    margin: 2px 0 0;
+}
+
+.morse-summary>p {
+    margin: 16px 0 0;
+}
+
+.morse-lessons {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.morse-lesson-content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.morse-lesson-content[hidden] {
+    display: none;
+}
+
+.morse-lesson-buttons {
+    flex: 0 0 auto;
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.morse-lesson-content {
+    padding: 16px;
+    border: 1px solid #bdd3e5;
+    border-radius: 8px;
+    background: #edf5fb;
+}
+
+.morse-lesson-content h3 {
+    margin: 0;
+}
+
+.morse-lesson-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.morse-lesson-buttons button {
+    min-width: 0;
+    padding: 10px 4px;
+    border: 1px solid #bdd3e5;
+    border-radius: 6px;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.morse-lesson-buttons button[aria-expanded='true'] {
+    background: #d7e9f7;
+    border-color: #32648f;
+}
+
+.morse-search {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 12px;
+}
+
+.morse-conditions {
+    display: grid;
+    gap: 8px;
+    padding: 4px;
+}
+
+.morse-condition-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.morse-condition-heading h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.morse-date-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+    max-width: 640px;
+}
+
+.morse-date-field {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+.morse-date-field input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid #bdd3e5;
+    border-radius: 6px;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+}
+
+.morse-condition-heading button {
+    padding: 8px 16px;
+    border: 1px solid #bdd3e5;
+    border-radius: 6px;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+}
+
+
+.morse-condition-heading button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.morse-results {
+    min-height: 0;
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+.morse-result-table {
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 14px;
+}
+
+.morse-result-table th,
+.morse-result-table td {
+    padding: 10px 8px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid #cbdfee;
+}
+
+.morse-result-table th {
+    position: sticky;
+    top: 0;
+    background: #e3eef8;
+    white-space: nowrap;
+}
+
+.morse-time-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    cursor: pointer;
+}
+
+.morse-time-sort:focus-visible {
+    outline: 2px solid #315f88;
+    outline-offset: 3px;
+}
+
+.morse-message-time {
+    font-variant-numeric: tabular-nums;
+}
+
+.morse-message-time>div {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.morse-message-text {
+    overflow-wrap: anywhere;
+}
+
+.morse-condition-heading button:not(:disabled) {
+    cursor: pointer;
+}
+
+.morse-result-table th {
+    padding-right: 24px;
+    z-index: 1;
+}
+
+.morse-result-table td {
+    overflow-wrap: anywhere;
+}
+
+.morse-column-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 12px;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+}
+
+.morse-column-resizer::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 5px;
+    width: 2px;
+    background: #a5bfd5;
+}
+
+.morse-column-resizer:hover::after,
+.morse-column-resizer:focus-visible::after {
+    background: #32648f;
+}
+
+.morse-column-resizer:focus-visible {
+    outline: 2px solid #32648f;
+    outline-offset: -2px;
+}
+
+.morse-column-measure {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    width: max-content;
+    white-space: nowrap;
+    font: inherit;
+}
+
+/* Keep all four buttons on one line without squeezing their labels. */
+.morse-lesson-buttons {
+    min-width: 0;
+    max-width: 100%;
+    grid-template-columns: repeat(4, minmax(max-content, 1fr));
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+}
+
+.morse-lesson-buttons button {
+    padding-inline: 12px;
+    white-space: nowrap;
+}
+
+/* Keep the horizontal scrollbar easy to see when needed. */
+.morse-lesson-buttons {
+    scrollbar-width: auto;
+    scrollbar-color: #8baac4 #e3eef8;
+}
+
+.morse-lesson-buttons::-webkit-scrollbar {
+    height: 12px;
+}
+
+.morse-lesson-buttons::-webkit-scrollbar-track {
+    background: #e3eef8;
+    border-radius: 6px;
+}
+
+.morse-lesson-buttons::-webkit-scrollbar-thumb {
+    background: #8baac4;
+    border: 2px solid #e3eef8;
+    border-radius: 6px;
+}
+
+/* Override both full-width layouts when the panel becomes narrow. */
+@container morse-content (max-width: 800px) {
+    .morse-panel.is-full.has-lesson,
+    .morse-panel.is-full:not(.has-lesson) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* An open lesson occupies the lower half. */
+    .morse-panel.is-full.has-lesson {
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    /* Closed lessons leave only the bottom button row. */
+    .morse-panel.is-full:not(.has-lesson) {
+        grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .morse-panel.is-full.has-lesson > .morse-search,
+    .morse-panel.is-full:not(.has-lesson) > .morse-search {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .morse-panel.is-full.has-lesson > .morse-lessons,
+    .morse-panel.is-full:not(.has-lesson) > .morse-lessons {
+        grid-column: 1;
+        grid-row: 2;
+        min-width: 0;
+    }
 }
