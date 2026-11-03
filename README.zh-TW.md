@@ -1,8 +1,8 @@
 # 歲月流明
 
-[Life Flow of Light](README.md)
+[English](README.md)
 
-<p align="center">
+<p align="left">
   <img src="frontend/src/assets/Icon.png"
        width="100"
        height="100"
@@ -105,6 +105,8 @@ Copyright © 2026. All rights reserved.
 
 歡迎智慧家庭、獨居照護、物聯網及相關領域的企業、研究人員或開發者與我交流，共同探討這個構想的實際應用可能性。
 
+## 七、一起來探究
 
 [如何使用這個專案](docs/UserGuide.zh-TW.md)
+
 [開發歷程](docs/DevJournal.zh-TW.md)

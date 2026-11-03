@@ -1,8 +1,8 @@
 # Life Flow of Light 
 
-[歲月流明](README.zh-TW.md)
+[中文](README.zh-TW.md)
 
-<p align="center">
+<p align="left">
   <img src="frontend/src/assets/Icon.png"
        width="100"
        height="100"
@@ -97,6 +97,10 @@ The general concept described in this repository is not claimed to be an exclusi
 
 I welcome discussions with smart home companies, independent living technology providers, researchers, and developers who may be interested in evaluating or developing this idea further.
 
+
+## 7. Let's explore together
+
 [How to use this repo](docs/UserGuide.md)
+
 [Development History](docs/DevJournal.md)
 
