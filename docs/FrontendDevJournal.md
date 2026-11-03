@@ -1867,3 +1867,726 @@ These observations became requirements, then code changes, then another round of
 I do not understand every part immediately. These notes help me return to the reasons behind the code.
 
 The project is becoming something I can use, question, and improve—not only something I can build.
+
+可以。原本的筆記寫到 **第 59 節**，下面可以直接接在檔案最後。這次同樣用簡單英文，記錄我們完成了什麼、為什麼這樣設計，以及實際操作時發現的問題。
+
+---
+
+## 60. Progress update — 1–3 November 2026
+
+The Morse panel now includes message searching and four lessons.
+
+The earlier sections describe the stage before these features were connected.
+
+Since then, we have added:
+
+- Date and time inputs, including seconds.
+- A Find button and shared validation dialog.
+- Search results with message times, positions, and bulbs.
+- Reversible time sorting.
+- Adjustable table columns.
+- Different layouts for lessons and search results.
+- Four lessons with step-by-step sending instructions.
+- More forgiving Morse timing rules.
+
+I tested the interface in English and Traditional Chinese.
+
+During practice, we also used real lighting records to investigate why some messages did not match what I intended to send.
+
+This taught me that a working interface, a successful build, and a correctly decoded message are different things to verify.
+
+## 61. Improving the History tooltip
+
+Before continuing with Morse, we improved the tooltip on each historical lighting bar.
+
+A position tells us where a signal happened. A bulb tells us which device produced it.
+
+These are different pieces of information.
+
+For example, two different bulbs may have been installed in the same room at different times.
+
+The tooltip now includes:
+
+- The bulb label.
+- The position recorded in the lighting session.
+- The start and last-seen times.
+
+The lighting session keeps its `bulb_id`, allowing the interface to connect the record to the bulb.
+
+This explains why the application protects bulbs that already have history from deletion.
+
+### Current names and historical positions
+
+The displayed bulb name comes from the bulb information available now.
+
+The position comes from the historical lighting session.
+
+Therefore, renaming a bulb may change the label displayed for its older records. This does not mean that the old record changed rooms.
+
+I learned to ask whether a displayed value describes the present or the past.
+
+## 62. Separating Morse responsibilities
+
+Morse has its own interface and teaching content.
+
+The main responsibilities are:
+
+| Part | Responsibility |
+| --- | --- |
+| `MorsePanel.tsx` | Search controls, results, sorting, and layout state |
+| `MorsePanel.css` | Panel, table, and lesson presentation |
+| `MorseLessons.tsx` | Lesson content and lesson buttons |
+| `morse-text.ts` | English and Traditional Chinese text |
+| Backend Morse decoder | Interpret recorded signals |
+
+Keeping the text in `morse-text.ts` makes it easier to compare translations.
+
+Keeping the lessons in a separate component makes the search component easier to read.
+
+The frontend explains how to send a message. The backend decides what the recorded signals mean.
+
+Those two parts must follow compatible timing rules.
+
+## 63. Designing three Morse layouts
+
+The Morse panel has different responsibilities depending on its available space.
+
+### Collapsed
+
+The collapsed panel provides a short timing reminder:
+
+| Meaning | Intended duration |
+| --- | --- |
+| Dot | Hold for 2 seconds |
+| Dash | Hold for 6 seconds |
+| Between signals in one letter | Release for 2 seconds |
+| Between letters in one word | Release for 6 seconds |
+| Between words | Release for 14 seconds |
+
+### Half-width
+
+The search controls stay at the top.
+
+The result table uses the available middle space.
+
+The four lesson buttons stay together at the bottom.
+
+Opening a lesson gives its content approximately half the panel height. The result area becomes smaller, while the search controls remain in place.
+
+Only one lesson can be open at a time.
+
+### Full-width
+
+When a lesson is open:
+
+- The lesson occupies the left side.
+- Search controls and results occupy the right side.
+
+When no lesson is open, the search area can use the full width.
+
+We changed this after noticing that an empty left half wasted useful space.
+
+I learned that a layout should respond to the content that is actually visible.
+
+## 64. Representing lesson selection with state
+
+We represent the selected lesson with one value:
+
+```tsx
+type LessonId = 1 | 2 | 3 | 4;
+
+const [activeLesson, setActiveLesson] =
+  useState<LessonId | null>(null);
+```
+
+The number identifies the open lesson.
+
+`null` means that no lesson is open.
+
+This naturally prevents two lessons from being open together.
+
+Clicking a different lesson replaces the selected value. Clicking the selected lesson closes it.
+
+When entering the full-width layout, Lesson 1 opens if no lesson was already selected.
+
+However, the user can still close that lesson afterward and give the search area more space.
+
+I learned that a default selection is not the same as a permanent restriction.
+
+## 65. Moving validation to the Find action
+
+At first, Morse checked the range whenever a date input changed.
+
+This interrupted typing.
+
+For example, changing the month could temporarily make From later than To, even though I had not finished editing.
+
+History and Morse need different validation behavior:
+
+| Panel | When a search starts | When to validate |
+| --- | --- | --- |
+| History | After a date change | Before accepting the new range |
+| Morse | After pressing Find | Before sending the search request |
+
+Morse inputs now allow intermediate edits.
+
+Pressing Find checks that:
+
+- Both dates and times are complete and valid.
+- To is at least one minute after From.
+
+The minimum interval is:
+
+```ts
+60 * 1000
+```
+
+JavaScript timestamps use milliseconds, so one minute is 60,000 milliseconds.
+
+If validation fails, the shared dialog explains the problem and the search does not run.
+
+The user can then correct the inputs.
+
+I learned that validation should happen at a useful moment, rather than interrupting every step of an unfinished action.
+
+## 66. Understanding local time and timestamps
+
+The Morse inputs display local dates and times.
+
+The frontend converts a complete local input into an epoch timestamp before sending it to the backend.
+
+Conceptually:
+
+```ts
+const timestamp = new Date(localInput).getTime();
+```
+
+An epoch timestamp represents an exact instant as milliseconds since the Unix epoch.
+
+It does not contain a timezone label.
+
+The frontend also formats returned timestamps into local time for display.
+
+The flow is:
+
+1. The user chooses a local date and time.
+2. The frontend converts it to a timestamp.
+3. The backend compares it with stored timestamps.
+4. The frontend formats the returned times for the user.
+
+We do not manually subtract eight hours.
+
+Doing that after the conversion would shift the time again.
+
+The interface language and timezone are also separate. Switching to English changes labels and formatting choices; it does not turn local time into UTC.
+
+## 67. Searching across the three positions
+
+The Morse API accepts a position and a time range.
+
+The frontend searches the three positions and combines their returned messages.
+
+Each result includes:
+
+- `start_time`
+- `end_time`
+- `message`
+- `bulb_id`
+- `position`
+
+The bulb ID connects the message to its source device.
+
+The position identifies where that recorded message happened.
+
+The interface distinguishes several states:
+
+| State | Meaning |
+| --- | --- |
+| Not searched | No search has been completed yet |
+| Loading | Requests are still running |
+| Success with results | Messages were found |
+| Success without results | No matching messages were returned |
+| Error | The search could not be completed |
+
+“No data” should not hide a request failure.
+
+Likewise, one failed position request should not silently produce a result that looks complete.
+
+## 68. Updating tests when the response changes
+
+Adding `bulb_id` and `position` changed the API response shape.
+
+Some existing tests still expected only the message and its timestamps.
+
+The tests failed because the actual objects contained additional fields.
+
+A deep equality assertion compares the complete structure of an object.
+
+It does not simply check that a few expected fields are present.
+
+We updated the expected results to include the intended source information.
+
+After those changes, the backend reported:
+
+- 41 tests passed.
+- 0 tests failed.
+- The TypeScript build succeeded.
+
+This result belongs to that stage of the work. Later timing changes require their own checks.
+
+I learned not to update a test merely to make it pass.
+
+First, I need to decide whether the changed behavior is intentional and correct.
+
+## 69. Making the result table easier to read
+
+The original table gave too much room to the time column.
+
+We wanted Message to receive more space, especially when all four columns were visible.
+
+We also changed the displayed time range.
+
+For a message beginning and ending on the same local date:
+
+```text
+01/11/2026 15:09:18
+→ 15:10:32
+```
+
+If the message crosses into another date, the end date must also be shown.
+
+The exact date order may depend on the selected formatting language.
+
+We compare the local year, month, and day to decide whether both timestamps belong to the same local date.
+
+Comparing only the day number would be incorrect. Two different months can both contain a day numbered 1.
+
+## 70. Hiding columns without losing information
+
+When the result table is narrow, it shows:
+
+- Local time.
+- Message.
+
+When Morse is full-width with no lesson open, it also shows:
+
+- Position.
+- Bulb.
+
+Hiding a column changes the presentation, not the returned data.
+
+The source information remains available in the result objects and is also provided through hover text on the message.
+
+This follows the same idea used earlier for the Bulbs serial-number column.
+
+I learned that every available field does not need to remain visible in every layout.
+
+## 71. Allowing manual column resizing
+
+We added draggable separators to the table headers.
+
+Dragging changes the selected column’s width.
+
+The resize interaction remembers:
+
+- Which column is being resized.
+- Where the pointer started.
+- The column’s starting width.
+- Its minimum permitted width.
+
+The new width comes from the pointer’s horizontal movement.
+
+Pointer capture helps the drag continue when the pointer moves outside the narrow separator.
+
+Keyboard controls also allow width adjustments.
+
+### Minimum widths
+
+The minimum width is based on the English column heading, with room for padding and relevant controls.
+
+This prevents a column from becoming too narrow to identify.
+
+If the minimum widths together exceed the table container, horizontal scrolling is necessary.
+
+For example, a container cannot display 500 pixels of minimum-width columns inside 400 pixels without either overflowing or breaking those minimum widths.
+
+We chose scrolling instead of crushing the headings.
+
+### Resetting widths
+
+Custom widths are temporary.
+
+Collapsing Morse resets them, so reopening the panel starts with the default widths.
+
+I learned that remembering a setting forever is not always helpful. The correct lifetime depends on how the user expects the feature to behave.
+
+## 72. Responding to the panel’s width
+
+The lesson buttons became cramped when the browser window narrowed.
+
+Even a “full-width” Morse panel can be small because the other collapsed panels still occupy space.
+
+We therefore used a container query.
+
+A media query responds to the browser viewport.
+
+A container query responds to the size of a particular containing element.
+
+When Morse becomes too narrow for the side-by-side layout:
+
+- The search area moves above the lesson area.
+- The lesson buttons use the bottom row.
+- The buttons remain on one line.
+- That row can scroll horizontally if necessary.
+
+This makes the layout depend on the space Morse actually receives.
+
+## 73. Diagnosing the layout that shrank upward
+
+One attempted responsive change caused the content to occupy only the upper part of the panel.
+
+The container query was active, but some older rules still controlled the child positions.
+
+The grid’s row arrangement changed while the children remained in their earlier row.
+
+The result was unused space below them.
+
+The problem involved CSS specificity.
+
+For example:
+
+```css
+.morse-panel.is-full.has-lesson
+```
+
+is more specific than:
+
+```css
+.morse-panel.is-full
+```
+
+A later rule does not automatically override a more specific earlier rule.
+
+We corrected the responsive rules for both situations:
+
+- Full-width with a lesson.
+- Full-width without a lesson.
+
+We also explicitly placed search in the first row and lessons in the second row.
+
+I tested the corrected layout and confirmed that it behaved as expected.
+
+I learned to check both the grid container and its children when a layout looks wrong.
+
+## 74. Building the four lessons
+
+The lessons move from guided practice toward independent use.
+
+| Lesson | Goal |
+| --- | --- |
+| Lesson 1 | Send SOS with detailed instructions |
+| Lesson 2 | Practise other letters using the A–Z reference |
+| Lesson 3 | Send “I CAN USE MORSE CODE” |
+| Lesson 4 | Compose a message independently |
+
+The instructions explain how to:
+
+1. Collapse House to use the momentary buttons.
+2. Choose a position with an installed bulb.
+3. Use the same bulb for the whole message.
+4. Watch the live timeline.
+5. Hold and release for the required durations.
+6. Wait for the message to finish.
+7. Search for the stored result.
+
+Lesson 4 currently explains that the decoder supports English letters and spaces.
+
+Numbers and punctuation still need decoder support and tests before the interface can promise that they work.
+
+## 75. Reusing instructions instead of writing every action by hand
+
+Lesson 1 and Lesson 3 use the same `SignalActions` component.
+
+The component receives a message and looks up each letter’s Morse pattern.
+
+It then generates the actions:
+
+- A dot becomes a 2-second hold.
+- A dash becomes a 6-second hold.
+- Another signal in the same letter requires a 2-second release.
+- Another letter requires a 6-second release.
+- Another word requires a 14-second release.
+- The final signal is followed by the message-completion wait.
+
+This avoids maintaining separate handwritten instructions for every occurrence of a letter.
+
+Fixing the shared component also fixes both lessons.
+
+### Gaps replace one another
+
+The pauses must not be added together.
+
+After the last signal of a letter, release for 6 seconds before the next letter.
+
+Do not release for 2 seconds and then add another 6 seconds.
+
+At a word boundary, use the 14-second gap instead.
+
+This was an important detail to explain clearly in the lessons.
+
+## 76. Why the live strip is not an exact stopwatch
+
+During practice, I saw three short groups of gold cells but did not receive the expected S.
+
+The live strip marks a cell gold if light was observed during any part of that second.
+
+A gold cell does not necessarily mean the light stayed on for the entire second.
+
+For example, a short pulse crossing a one-second boundary can appear in two cells.
+
+The backend works from heartbeat timestamps, not from the number of gold cells.
+
+The decoder estimates the end of a pulse using:
+
+```text
+last_seen_at + 200 milliseconds
+```
+
+That is an estimate based on the intended heartbeat interval.
+
+It is not an exact measurement of the release action.
+
+I learned that a visual summary and the underlying measurements can have different levels of precision.
+
+## 77. Inspecting real records with curl
+
+When browser-console input was inconvenient, we used `curl` in the Linux terminal.
+
+The request went directly to:
+
+```text
+http://127.0.0.1:3000/light-sessions
+```
+
+The query included:
+
+- Position.
+- Start timestamp.
+- End timestamp.
+
+The returned sessions showed their `started_at` and `last_seen_at` values.
+
+From those values, we calculated:
+
+```text
+Estimated pulse length =
+last_seen_at + heartbeat interval - started_at
+```
+
+And between consecutive pulses:
+
+```text
+Estimated release gap =
+next started_at - previous estimated end
+```
+
+This helped us separate several possible causes:
+
+- Looking at an older search result.
+- Searching the wrong time range.
+- Pulses outside the accepted timing range.
+- Gaps interpreted as letter boundaries.
+
+I learned to compare the timestamps before assuming that a displayed result belongs to the latest attempt.
+
+## 78. Making timing more forgiving
+
+The first timing rules were too strict for some of my short manual signals.
+
+One real attempt at S contained estimated pulse lengths of approximately:
+
+- 1.403 seconds.
+- 1.605 seconds.
+- 1.199 seconds.
+
+Its estimated gaps were approximately 2.605 and 3.056 seconds.
+
+We adjusted the decoder’s timing tolerance.
+
+The revised ranges are:
+
+| Meaning | Accepted duration |
+| --- | --- |
+| Dot or gap within a letter | 0.8–3.2 seconds |
+| Dash or gap between letters | 4.8–7.2 seconds |
+| Gap between words | 12.8–15.2 seconds |
+
+The teaching targets remain 2, 6, and 14 seconds.
+
+The tolerance helps interpret imperfect input. It does not change the recorded timestamps.
+
+The ranges still leave ambiguous durations unaccepted rather than forcing every duration into a category.
+
+The message-completion threshold remains separate. The lessons tell the user to wait at least 18 seconds after the final signal before searching.
+
+We also prepared boundary checks and a regression test using the real S attempt.
+
+A regression test keeps a known example so a later change does not accidentally break it again.
+
+## 79. Understanding why O became TTT
+
+Another practice attempt produced TTT instead of O.
+
+The three estimated holds were:
+
+- 6.006 seconds.
+- 5.600 seconds.
+- 5.806 seconds.
+
+These were all valid dashes.
+
+However, the estimated release gaps were:
+
+- 6.845 seconds.
+- 7.177 seconds.
+
+Those gaps separated letters.
+
+Therefore, the decoder read three separate one-dash letters:
+
+```text
+T T T
+```
+
+To send O, the three dashes must stay within one letter:
+
+```text
+Hold 6 seconds
+Release 2 seconds
+Hold 6 seconds
+Release 2 seconds
+Hold 6 seconds
+```
+
+I realized that I had misread the required pause.
+
+We did not need another decoder change for this example.
+
+I learned that Morse depends on both the light and the silence.
+
+The gaps carry meaning too.
+
+## 80. Making the teaching text visually clear
+
+The A–Z reference made B and S look confusingly similar.
+
+Their actual patterns are different:
+
+| Letter | Pattern |
+| --- | --- |
+| B | − · · · |
+| S | · · · |
+
+The first dash of B was too close to the letter label.
+
+We added space between the letter and its code, increased the code size, and separated the symbols.
+
+The relevant CSS concepts are:
+
+| Property | Purpose |
+| --- | --- |
+| `display: flex` | Place the letter and code beside each other |
+| `gap` | Separate the letter from the code |
+| `flex: 0 0 24px` | Reserve a consistent width for the letter |
+| `font-family: monospace` | Use consistent character widths |
+| `letter-spacing` | Separate the code symbols |
+| `white-space: nowrap` | Keep one code pattern together |
+
+We also prepared the same treatment for the letter headings in Lessons 1 and 3.
+
+Because both lessons use `SignalActions`, one shared style can improve both.
+
+### Explicit line breaks
+
+I also wanted each timing sentence on its own line.
+
+We added `\n` to the translation strings and used:
+
+```css
+.morse-timing-lines {
+  white-space: pre-line;
+}
+```
+
+A newline in a JavaScript string does not normally become a visible line break in HTML text.
+
+The CSS tells the browser to preserve those breaks while still allowing normal wrapping.
+
+## 81. Verification and remaining work
+
+During this stage, I confirmed several interface changes through manual testing:
+
+- English and Traditional Chinese displays.
+- Search-range validation.
+- Half-width and full-width layouts.
+- Result-table resizing.
+- Responsive lesson placement.
+- The corrected layout after the CSS conflict.
+
+The backend’s 41-test suite and build passed after adding source fields to the Morse results.
+
+Later, real practice showed that the revised decoder recognized the previously rejected S.
+
+These are separate pieces of evidence, collected at different points in development.
+
+Before release, I should run the checks again against the final code.
+
+From `frontend/`:
+
+```bash
+npm run build
+npm run lint
+```
+
+From `backend/`:
+
+```bash
+npm test
+npm run build
+```
+
+Remaining checks include:
+
+- Practising the complete lesson flow.
+- Confirming the latest lesson-spacing changes in the browser.
+- Checking messages that cross midnight.
+- Checking empty results and failed requests.
+- Confirming column widths reset after collapsing Morse.
+- Keeping the teaching text consistent with supported characters.
+
+Punctuation and number support remain future work.
+
+## 82. What I learned from this stage
+
+I learned that completing a feature includes more than connecting its API.
+
+The user needs to understand:
+
+- What to do.
+- When to do it.
+- What the application recorded.
+- Why the result appeared.
+
+I also learned to investigate problems in smaller steps.
+
+When a message looks wrong, I can check the selected range, source bulb, timestamps, pulse lengths, gaps, and decoder rules.
+
+When a layout looks wrong, I can check the available width, grid positions, matching selectors, and CSS specificity.
+
+Not every unexpected result needs a code change.
+
+Sometimes the implementation is wrong. Sometimes the instructions are unclear. Sometimes I am looking at an older result or using the wrong pause.
+
+The useful next step is to gather enough evidence to tell those situations apart.
+
+These notes help me keep both the implementation and the reasons behind it understandable when I return later.

@@ -97,5 +97,6 @@ The general concept described in this repository is not claimed to be an exclusi
 
 I welcome discussions with smart home companies, independent living technology providers, researchers, and developers who may be interested in evaluating or developing this idea further.
 
-[How to use this repo](UserGuide.md)
+[How to use this repo](docs/UserGuide.md)
+[Development History](docs/DevJournal.md)
 

@@ -1,256 +1,274 @@
 # Life Flow of Light — User Guide
 
-[Project overview](../README.md) · [Learning Notes](./LearningNotes.md) · [Morse Guide](./MorseGuide.md)
+[繁體中文](UserGuide.zh-TW.md) · [Project overview](../README.md) · [Structure and technology](StructureIntro.md)
 
-**Documentation checkpoint: 17 October 2026**
+This guide walks you through setting up Life Flow of Light and trying the demonstration on your own computer.
 
-This guide explains how to obtain and run the existing backend on another Debian Linux computer.
+The examples use the author's development environment: Debian Linux in a Chromebook's Linux development environment. This is a reference setup, not a requirement to use the same computer or operating system.
 
-It assumes basic terminal use and explains the purpose of each main command.
+If you use Windows, macOS, or another Linux distribution, use the steps to understand what needs to be done. You may need to adapt installation commands, terminal configuration, and file paths to your environment.
 
-The project currently has a backend only. There is no frontend application to open yet.
+This guide does not provide separate instructions for every operating system, and the examples have not been verified on all platforms.
 
-## 1. What this version can do
+We will prepare the tools, download the project, install and start both applications, then explore lighting history and practise sending a Morse message.
 
-The backend currently supports:
+For an explanation of how the project is organized, see [Structure and Technology](StructureIntro.md). You do not need to read it before following this guide.
 
-- Creating and opening its SQLite database.
-- Checking server and database connectivity.
-- Registering, listing, and renaming lamps.
-- Generating an optional three-day demonstration dataset.
-- Checking recorded lighting activity for possible Morse messages.
-- Running ten automated Morse API tests.
+## 1. Before you begin
 
-Lamp installation, removal, replacement, live heartbeat processing, and a general lighting-session query API are still under development.
-
-These instructions describe the current checkpoint, not every feature in the project's product concept.
-
-## 2. Before starting
-
-You will need:
+To follow the Debian examples directly, you will need:
 
 - A Debian Linux environment with a Bash terminal.
-- Permission to install system packages using `sudo`.
-- An internet connection to obtain the repository and dependencies.
-- Access to the GitHub repository if it is private.
+- Permission to install system packages with `sudo`.
 
-You do not need to provide your GitHub credentials to ChatGPT.
+If you use a Chromebook, enable its Linux development environment first.
 
-A fresh copy of the repository contains source code and setup files. It does not contain the original computer's local SQLite database.
+Regardless of your operating system, you will need:
 
-## 3. Install the system tools
+- A browser and a suitable terminal.
+- Node.js 24.x and npm.
+- Git if you download the project using `git clone`.
+- An internet connection to download the project and dependencies.
+- Access to the repository if it is private.
 
-Check the operating system:
+The following steps explain how to prepare these tools on Debian. On another operating system, use the corresponding installation methods for your environment.
 
-```bash
-cat /etc/os-release
-```
+The demonstration runs locally. You do not need physical bulbs, sensors, a cloud account, or a separate database server.
 
-On Debian, install the tools used in this guide:
+Use one browser tab to operate the demonstration. Multiple tabs or clients can send conflicting lighting activity.
+
+### Reading and adapting the commands
+
+Copy only the commands inside each code block. Do not copy a terminal prompt such as `noa@penguin:~$`.
+
+Run the commands in order. If a command fails, check the error and whether the command applies to your environment before continuing.
+
+The examples use Bash:
+
+- `~` means your home directory.
+- `cd` changes the current directory.
+- `pwd` shows your current directory.
+- `ls` lists its files.
+
+The guide assumes the project is stored at:
+
+`~/Life-Flow-of-Light`
+
+If you downloaded it elsewhere, adjust the paths accordingly.
+
+Commands such as `apt`, `sudo`, and `source ~/.bashrc` relate to the demonstrated environment. Do not assume that they work unchanged in a different shell or operating system.
+
+The goal is to complete the same setup tasks on your computer, even if the exact commands differ.
+
+## 2. Install the basic system tools
+
+Open a terminal and run:
 
 ```bash
 sudo apt update
 sudo apt install -y git curl ca-certificates
 ```
 
-Their purposes are:
+`apt update` refreshes the package list. The second command installs:
 
-| Tool | Purpose |
+| Tool | Why it is needed |
 | --- | --- |
-| Git | Download and track the project's source files. |
-| curl | Download the Node version manager and send API requests. |
-| ca-certificates | Provide certificates used to verify HTTPS connections. |
+| Git | Downloads the repository and manages later code updates. |
+| curl | Downloads the Node version manager and checks the backend connection. |
+| ca-certificates | Helps verify secure HTTPS connections. |
 
-`apt update` refreshes package information. It does not upgrade every installed package.
+If `sudo` asks for your password, the terminal may show no characters while you type. This is normal.
 
-The backend uses Node.js's built-in SQLite module, so a separate SQLite database server is not required.
+## 3. Prepare Node.js 24
 
-## 4. Obtain the project
+Both the frontend and backend require Node.js `24.x`.
 
-On the GitHub repository page, use the **Code** button to obtain its clone URL.
-
-Replace `YOUR_GITHUB_OWNER` below with the actual owner or organization:
+If you already have Node.js and npm installed, check them first:
 
 ```bash
-cd ~
-
-git clone https://github.com/YOUR_GITHUB_OWNER/Life-Flow-of-Light.git
-
-cd Life-Flow-of-Light/backend
-```
-
-The placeholder is not the actual repository address.
-
-For a private repository, use GitHub's supported authentication method for your own account. An SSH clone URL is also suitable if you have already configured SSH access.
-
-`git clone` is the initial download command. `git pull` is used later, inside an existing checkout, to retrieve and integrate updates.
-
-Check that the backend files are present:
-
-```bash
-ls
-```
-
-They should include `package.json`, `package-lock.json`, `tsconfig.json`, `schema.sql`, `src/`, and `test/`.
-
-Check the requested Node.js version:
-
-```bash
-cat .nvmrc
-```
-
-At this checkpoint, it contains `24`.
-
-## 5. Install the Node version manager
-
-The project uses nvm to select its Node.js version.
-
-The setup used for this checkpoint is:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | bash
-
-source ~/.bashrc
-
-nvm --version
-```
-
-The first command downloads and executes the installer from the official nvm repository.
-
-`source ~/.bashrc` loads the updated shell configuration into the current terminal.
-
-If nvm is already installed and available, you can skip the installer.
-
-If you are rebuilding this project many years later, consult the [official nvm installation instructions](https://github.com/nvm-sh/nvm#installing-and-updating) if this installer no longer works on your system.
-
-## 6. Install the project's Node.js version
-
-From `Life-Flow-of-Light/backend`:
-
-```bash
-nvm install
-nvm use
-
 node -v
 npm -v
 ```
 
-nvm reads `.nvmrc` and selects the requested Node.js version. Node.js includes npm.
+If Node.js shows `v24.x.x` and npm is available, you can skip the rest of this section.
 
-The checkpoint uses Node.js 24.x.
+For a new Debian environment, the following example uses nvm to install Node.js.
 
-The `.nvmrc` file currently specifies a major version, not an exact patch release. A new installation may therefore select a different 24.x patch version from the original machine.
+### Install nvm
 
-In a new terminal, return to `backend/` and run `nvm use` before working on the project.
-
-## 7. Install the project dependencies
-
-From `backend/`:
+If nvm is already installed, skip this installer.
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | bash
+source ~/.bashrc
+nvm --version
+```
+
+The first command downloads and runs the installer from the official nvm repository.
+
+`source ~/.bashrc` loads the updated Bash configuration into this terminal.
+
+If `nvm` is still not found, close the terminal, open a new one, and try:
+
+```bash
+nvm --version
+```
+
+For installation details, see the [official nvm instructions](https://github.com/nvm-sh/nvm#installing-and-updating).
+
+### Install Node.js and set the default version
+
+```bash
+nvm install 24
+nvm alias default 24
+node -v
+npm -v
+```
+
+These commands:
+
+1. Install Node.js 24 and select it in the current terminal.
+2. Set Node.js 24 as the default for new terminals that load nvm.
+3. Display the installed Node.js and npm versions.
+
+`node -v` should show a version beginning with `v24.`.
+
+Node.js includes npm, so you do not need to install npm separately.
+
+Setting the default is convenient for a new development environment. If you already maintain other Node.js projects, you can keep your existing default and use `nvm use 24` when working on this project instead.
+
+Once the correct version is active, you do not need to select it again before every command.
+
+Do not use `sudo` with the npm commands in this guide.
+
+## 4. Obtain the project
+
+If you have already downloaded the complete repository, skip the clone command and enter your existing project folder.
+
+For a first download, open the repository's GitHub page and copy its HTTPS URL from the **Code** button.
+
+Replace `YOUR_GITHUB_OWNER` in this example with the actual repository owner:
+
+```bash
+cd ~
+git clone https://github.com/YOUR_GITHUB_OWNER/Life-Flow-of-Light.git
+cd ~/Life-Flow-of-Light
+```
+
+The example contains a placeholder, not the actual repository address.
+
+`git clone` downloads the first copy. `git pull` retrieves updates inside an existing checkout.
+
+Check the project root:
+
+```bash
+pwd
+ls
+```
+
+You should see:
+
+```text
+backend  docs  frontend  README.md  README.zh-TW.md
+```
+
+Downloading the repository gives you the source code. It does not copy the author's local database or installed dependencies.
+
+## 5. Install the backend dependencies
+
+Run:
+
+```bash
+cd ~/Life-Flow-of-Light/backend
 npm ci
 ```
 
-This installs the dependency versions recorded in `package-lock.json`.
+`npm ci` installs the dependency versions recorded in `package-lock.json`.
 
-Keep both `package.json` and `package-lock.json` from the repository. They must agree.
+You do not need to run `npm init` or install Express and TypeScript individually. The project already declares its dependencies.
 
-You do not need to run `npm init` or install Express, TypeScript, and the other packages individually.
+Wait for installation to finish successfully before continuing.
 
-For this workflow, include development dependencies: the type checker, tests, seed command, and development server use them.
-
-`npm ci` creates or replaces `node_modules/`. It does not generate the application's source files or run the demo seed.
-
-Do not use `sudo` for these npm commands when using nvm.
-
-## 8. Check the source and Morse tests
+### Check the backend
 
 ```bash
 npm run typecheck
-npm run test:morse
+npm test
+npm run build
 ```
 
-`typecheck` checks the source files selected by `tsconfig.json` without producing compiled JavaScript.
+These commands check application types, run the automated tests, and compile the backend.
 
-`test:morse` runs the Morse API tests using independent in-memory databases. It does not modify the application's saved database.
+The tests prepare their own test environments. You do not need to start the server or create demonstration data first.
 
-At this checkpoint, the expected test summary is:
+The test count may change as the project develops. Check that there are no failures and that each command completes successfully.
 
-```text
-tests 10
-pass 10
-fail 0
-```
+## 6. Choose how to start the database
 
-Individual execution times will vary.
+The backend initializes its local database when the database module first runs.
 
-The general `npm test` command has not yet been configured as a complete project test suite. Use `npm run test:morse` for these tests.
+The database file is:
 
-## 9. Choose an empty or demo database
+`backend/data/life-flow-of-light.sqlite`
 
-The application creates this local file when its database module first runs:
+You do not need to create the tables manually or install a separate SQLite server.
 
-```text
-backend/data/life-flow-of-light.sqlite
-```
+### Recommended first visit: use demonstration data
 
-It also reads `backend/schema.sql` to initialize the tables.
-
-### Start without demonstration records
-
-Skip the seed command and continue to the server-start step.
-
-The backend will initialize an empty database if none exists.
-
-### Start with the demonstration
-
-Before creating your own lamps, run:
+While still inside `backend/`, run:
 
 ```bash
 npm run seed
 ```
 
-The seed creates:
+The demonstration creates:
 
-- A in `living_room`.
-- B in `bedroom`.
-- C in `bathroom`.
-- Thirty-one lighting sessions across the previous three complete days.
-- A hidden HELP message from B on the final evening.
+- Three bulbs: A, B, and C.
+- Thirty-one lighting sessions.
+- Records for the three complete local calendar days before the command runs.
+- A HELP Morse pattern in the bedroom on the third evening.
 
-The demonstration schedule uses UTC+08:00. The dates are calculated when the command runs.
+The dates follow the computer's local timezone when the seed runs.
 
-Successful output begins with:
+This gives you history to explore immediately.
 
-```text
-Created 3 lamps and 31 lighting sessions.
-```
+The seed requires empty application tables. It refuses to overwrite existing records.
 
-The seed requires both application tables to be empty. It does not erase or overwrite existing records.
+Run it once for a fresh demonstration. It does not refresh the dates automatically and does not need to run each time you start the project.
 
-Run it once for a fresh demonstration database. It does not refresh the dates each morning or start a live heartbeat sender.
+### Alternative: start empty
 
-For the hidden message's meaning and timing, see the [Morse Guide](./MorseGuide.md).
+Skip `npm run seed`.
 
-## 10. Start the development server
+The backend will initialize an empty database when started. You can then create and install bulbs through the interface.
 
-From `backend/`:
+Your History panel will initially have no saved lighting activity.
+
+If the seed refuses to run because records already exist, you can continue using those records. Do not delete your database just to proceed with this guide.
+
+## 7. Start the backend in Terminal A
+
+Inside `backend/`, run:
 
 ```bash
 npm run dev
 ```
 
-Expected startup message:
+The backend is expected to listen at:
 
-```text
-Backend running at http://127.0.0.1:3000
-```
+`http://127.0.0.1:3000`
 
-Leave this terminal running.
+Leave this terminal running. It is now Terminal A.
 
-The server listens on the local computer. This configuration does not make it available to other devices on the network.
+The terminal staying occupied is normal: the server continues running until you stop it.
 
-Open a second terminal for API requests:
+This address is the backend API, not the frontend application page.
+
+## 8. Install and start the frontend in Terminal B
+
+Open a second terminal.
+
+First, check that the backend responds:
 
 ```bash
 curl http://127.0.0.1:3000/health
@@ -262,256 +280,298 @@ Expected response:
 {"status":"ok","database":"connected"}
 ```
 
-This checks that the server can query SQLite.
+This confirms that the backend is reachable and can query the database.
 
-To stop the server, press `Ctrl+C` in its terminal.
-
-Stopping the server does not delete saved data.
-
-## 11. Try the lamp endpoints
-
-These examples assume the server is running.
-
-### List lamps
+Next, install the frontend dependencies:
 
 ```bash
-curl http://127.0.0.1:3000/lamps
+cd ~/Life-Flow-of-Light/frontend
+npm ci
 ```
 
-An empty database returns an empty array. A seeded database includes A, B, and C.
-
-### Register a lamp
+Check the frontend:
 
 ```bash
-curl -i -X POST http://127.0.0.1:3000/lamps
+npm run build
+npm run lint
 ```
 
-The response uses HTTP `201 Created` and contains:
-
-- An integer database ID.
-- A generated UUID serial number.
-- An initial name equal to that UUID.
-- A `null` position.
-
-The UUID becomes the lamp's permanent serial number.
-
-Registration does not install the lamp at a position.
-
-### Rename a lamp
-
-Find the lamp's ID in the list response.
-
-The following example uses ID `4`; replace it with the appropriate ID:
+Then start its development server:
 
 ```bash
-curl -i -X PATCH http://127.0.0.1:3000/lamps/4 \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Desk lamp"}'
+npm run dev
 ```
 
-A custom name must be non-empty after trimming and contain no more than 20 Unicode code points.
+Leave Terminal B running too.
 
-The automatically assigned UUID name is an exception to that length limit.
+Open the **Local** URL printed by Vite in your browser. It is commonly:
 
-Changing the name does not change the serial number.
+`http://localhost:5173`
 
-## 12. Check for Morse messages
+Use the actual URL shown in your terminal if it differs.
 
-The endpoint accepts a JSON body:
+The frontend forwards `/api` requests to the backend through its Vite development proxy. Both terminals must remain running.
 
-```text
-POST /morse/check
-```
+You do not need to open `index.html` manually.
 
-| Input | Meaning |
+## 9. Get familiar with the interface
+
+The page contains four panels, in this order:
+
+| Panel | What you can do |
 | --- | --- |
-| `position` | `bedroom`, `bathroom`, or `living_room`. |
-| `start_time` | Beginning of the requested range, as Unix milliseconds. |
-| `end_time` | End of the requested range, as Unix milliseconds. |
+| Bulbs | Manage virtual bulbs and their installation positions. |
+| House | Operate the simulated lights. |
+| History | Review recent activity and saved lighting sessions. |
+| Morse | Follow lessons and search for recorded Morse messages. |
 
-Times must be nonnegative integers within the supported timestamp range. `start_time` must be earlier than `end_time`.
+Use the language control to switch between English and Traditional Chinese.
 
-The interval includes its starting boundary and excludes signals beginning at its ending boundary. A complete message may finish exactly at `end_time`.
+Panels can be collapsed or expanded. Up to two panels share the available space; a single expanded panel can use the wider layout.
 
-### Search the demo bedroom records
+Opening another panel may collapse an existing one. If you close the last expanded panel, follow the dialog to choose what to open next.
 
-For this small demonstration, search from Unix time zero to now:
+Some columns and controls change their presentation according to the available panel width.
 
-```bash
-NOW_MS=$(node -p 'Date.now()')
+### Changes that stop simulated lighting
 
-curl -s -X POST http://127.0.0.1:3000/morse/check \
-  -H 'Content-Type: application/json' \
-  -d "{\"position\":\"bedroom\",\"start_time\":0,\"end_time\":$NOW_MS}"
-```
+- Reloading the page resets the simulated lights to off.
+- Adding, installing, uninstalling, or deleting a bulb reloads the page.
+- Collapsing House stops its currently active lights.
+- Once House is collapsed, its press-and-hold buttons can create new signals.
 
-`NOW_MS` contains the current time in milliseconds.
+Saved database history remains available after a page reload. The temporary live activity strip resets.
 
-With the demonstration records, the result should contain `HELP`.
+Avoid reloading or managing bulbs while recording a Morse message.
 
-The following is an example for one particular seed date. Your timestamps will depend on when the seed ran:
+## 10. Try normal lighting
 
-```json
-{
-  "result": [
-    {
-      "start_time": 1791986326000,
-      "end_time": 1791986400000,
-      "message": "HELP"
-    }
-  ]
-}
-```
+If you loaded the demonstration data, the three room positions already have bulbs.
 
-The returned end time is estimated from the final heartbeat plus 200 milliseconds.
+Otherwise:
 
-### Search another position
+1. Expand **Bulbs**.
+2. Add a bulb.
+3. Give it a recognizable name if desired.
+4. Choose an available position.
+5. Repeat for other positions if you want to control all three rooms.
 
-```bash
-NOW_MS=$(node -p 'Date.now()')
+The available positions are Living Room, Bedroom, and Bathroom. Each position can contain only one bulb.
 
-curl -s -X POST http://127.0.0.1:3000/morse/check \
-  -H 'Content-Type: application/json' \
-  -d "{\"position\":\"living_room\",\"start_time\":0,\"end_time\":$NOW_MS}"
-```
+Next:
 
-For the normal demo schedule, the expected response is:
+1. Expand **House**.
+2. Use a room's light control to turn it on.
+3. Leave it on for several seconds.
+4. Turn it off.
+5. Observe the recent activity display in **History**.
 
-```json
-{"result":[]}
-```
+A position without an installed bulb cannot send lighting activity.
 
-### Interpret the result
+### Bulb management rules
 
-- HTTP `200` with an empty array means the request was valid but no complete message was detected.
-- HTTP `200` with entries means possible messages were detected.
-- HTTP `400` means an input was invalid.
-- HTTP `422` means the scan contains too many session rows; request a shorter range.
+- A custom name must be non-empty and no longer than 20 Unicode code points.
+- The serial number is permanent.
+- Turn a bulb off and allow the backend to recognize it as inactive before uninstalling it.
+- Uninstalling removes the bulb from its position; it does not delete its history.
+- Only an uninstalled bulb with no lighting history can be deleted.
 
-The scan limit is 50,000 candidate session rows, including nearby context used to recognize message boundaries.
+If an uninstall is rejected immediately after turning a light off, wait a little longer and try again.
 
-For larger datasets, choose a specific time range instead of searching the entire history.
+## 11. Explore History
 
-The API returns complete messages contained in the range. It also waits for enough final silence before returning a trailing message.
+Expand **History**.
 
-The backend uses timestamps without converting them into a display timezone. A future frontend will handle local date selection and formatting.
+Choose a date range using **From** and **To**. The range includes both selected calendar dates.
 
-## 13. Where files and data belong
+History loads records when a valid date range changes. There is no separate Search button.
 
-| Path | Purpose |
+For demonstration data, select the three days before the date when you ran the seed. If you return several days later, adjust the range to those original dates.
+
+Use **By** to change the grouping:
+
+| Grouping | Result |
 | --- | --- |
-| `backend/src/` | Backend TypeScript source. |
-| `backend/test/` | Automated tests. |
-| `backend/schema.sql` | Database structure and constraints. |
-| `backend/package.json` | Dependencies and runnable scripts. |
-| `backend/package-lock.json` | Locked dependency resolutions. |
-| `backend/.nvmrc` | Requested Node.js version. |
-| `backend/tsconfig.json` | TypeScript configuration. |
-| `backend/data/` | Local SQLite database files. |
-| `backend/node_modules/` | Installed dependencies. |
-| `backend/dist/` | Generated JavaScript after compilation. |
-| `docs/` | Project documentation. |
+| Day | One chart per date, showing the three positions. |
+| Position | One chart per position, showing the selected dates. |
 
-Source files, tests, schema, configuration, and documentation belong in Git.
+You can also:
 
-Installed dependencies, generated JavaScript, and local database files are excluded by the project's ignore rules.
+- Reverse the displayed date order.
+- Zoom to inspect shorter intervals.
+- Scroll horizontally through a zoomed chart.
+- Point at a recorded bar to see its bulb, position, and times.
 
-Downloading the repository recreates the code. It does not restore your previous lamps and sessions.
+Changing the grouping changes the presentation, not the saved records.
 
-## 14. Build and compiled startup
+### Live activity versus stored history
 
-The project defines:
+The live strip shows recent frontend activity. Each cell represents one second:
+
+- Gold: light was observed during some part of that second.
+- Pale blue: no light was observed during that second.
+
+A gold cell does not mean the light stayed on for the entire second. Do not use the number of gold cells as a precise stopwatch.
+
+The historical chart displays records retrieved from the database. For an updated query after creating new activity, change the date range and return to the desired range.
+
+An empty chart means no records were returned for that selection. It is different from a failed request, which should show an error.
+
+## 12. Find the demonstration Morse message
+
+If you ran the seed:
+
+1. Expand **Morse**.
+2. Set the start and end date/time to include the third demonstration day's evening.
+3. Press **Search**.
+4. Look for HELP from the bedroom records.
+
+For an easy first search, include all three demonstration days and set the ending time to the following morning.
+
+The search covers the three supported positions. The results identify where a detected message came from.
+
+Morse validates the range when you press **Search**. The starting time must be earlier than the ending time.
+
+If no message appears, check the date range against the date when the seed actually ran.
+
+## 13. Send your own Morse message
+
+The Morse panel contains four lessons:
+
+| Lesson | Practice |
+| --- | --- |
+| 1 | Send SOS with detailed instructions. |
+| 2 | Practise letters using the A–Z reference. |
+| 3 | Send I CAN USE MORSE CODE. |
+| 4 | Compose your own message. |
+
+Start with Lesson 1.
+
+### Prepare the controls
+
+1. Make sure a bulb is installed at your chosen position.
+2. Collapse **House** to reveal its momentary buttons.
+3. Open **Morse** and select Lesson 1.
+4. Use the same position and bulb throughout the message.
+
+A momentary button sends lighting activity while you hold it. Releasing it stops the signal.
+
+### Follow the timing
+
+| Action | Target duration |
+| --- | --- |
+| Dot: hold | 2 seconds |
+| Dash: hold | 6 seconds |
+| Release between signals in one letter | 2 seconds |
+| Release between letters | 6 seconds |
+| Release between words | 14 seconds |
+| Final release before searching | At least 18 seconds |
+
+Use one appropriate gap at each boundary. Do not add the gaps together.
+
+For example, between two letters, release for 6 seconds in total—not 2 seconds followed by another 6 seconds.
+
+### Search your attempt
+
+1. Finish the final signal and release the button.
+2. Wait at least 18 seconds.
+3. Set the search start before your first signal.
+4. Set the search end after the message, preferably to the current time after the wait.
+5. Press **Search**.
+6. Check the result's time and position to identify your attempt.
+
+If you continue practising, update the ending time before searching again.
+
+The decoder currently supports English letters A–Z and spaces. Do not expect numbers or punctuation to work.
+
+The interface offers timing guidance, but manual signals can still be misread if the holds or pauses are outside the accepted ranges.
+
+For example, O contains three dashes with short pauses inside one letter. Long pauses between those dashes may produce TTT instead.
+
+This is a demonstration of signal interpretation. Sending SOS or HELP does not contact anyone or trigger an emergency service.
+
+## 14. Stop and return later
+
+To stop the project:
+
+1. Finish any signal and turn off the simulated lights.
+2. Press `Ctrl+C` in Terminal B.
+3. Press `Ctrl+C` in Terminal A.
+
+Stopping the servers does not delete the database.
+
+### Start again
+
+Terminal A:
 
 ```bash
+cd ~/Life-Flow-of-Light/backend
+npm run dev
+```
+
+Terminal B:
+
+```bash
+cd ~/Life-Flow-of-Light/frontend
+npm run dev
+```
+
+Open the Local URL printed by Vite.
+
+You do not need to reinstall dependencies, select Node.js again, or rerun the seed when the correct environment is already active.
+
+Run `npm ci` again when intentionally reinstalling dependencies or after an update changes the dependency files.
+
+### Back up your records
+
+Stop the backend and ensure no other process is using its database. Then copy the complete `backend/data/` folder to your backup location.
+
+Source-code downloads and database backups serve different purposes. Downloading the repository again does not restore your saved lighting records.
+
+## 15. Optional: run the compiled backend
+
+The main workflow above uses development mode.
+
+To run the compiled backend instead, first stop its development server with `Ctrl+C`, then run:
+
+```bash
+cd ~/Life-Flow-of-Light/backend
 npm run build
 npm start
 ```
 
-The build command compiles TypeScript into `backend/dist/`.
+`npm start` runs the generated JavaScript. It does not compile the source first.
 
-The start command runs `dist/server.js`. It does not compile the source first.
+Keep `schema.sql` in `backend/`, and run these commands from that directory.
 
-Stop the development server before starting another server on port 3000.
+You can continue using the frontend development server in Terminal B.
 
-At this documentation checkpoint, development startup and the Morse tests have been verified. Compiled startup has not yet been verified on the original machine.
+The frontend's `npm run preview` command previews built frontend assets. It does not start the backend and is not a complete deployment procedure.
 
-If checking this workflow, run the build, start the compiled server, then repeat the health request.
+## 16. Common problems
 
-Keep `schema.sql` in `backend/`. The compiled application still needs it.
-
-## 15. Stop, back up, and return later
-
-To stop the development server, press `Ctrl+C`.
-
-For a simple local database backup:
-
-1. Stop the server.
-2. Ensure no seed process or other application connection is using the database.
-3. Copy the complete `backend/data/` directory to your backup location.
-
-Keep source-code backups and database backups separately. Git does not preserve ignored database files.
-
-To return to the project later:
-
-```bash
-cd ~/Life-Flow-of-Light/backend
-nvm use
-npm run dev
-```
-
-You do not need to rerun the seed or reinstall dependencies every time.
-
-## 16. Rebuilding years later
-
-This guide records a working development checkpoint. It cannot guarantee that the same downloads and runtime will remain supported indefinitely.
-
-Preserve these together:
-
-- A copy of the Git repository, including its history.
-- The exact commit you want to rebuild.
-- `package.json` and `package-lock.json`.
-- `.nvmrc` and the recorded Node.js and npm versions.
-- `schema.sql`.
-- These guides.
-- Separate database backups if you want to restore historical records.
-
-Useful commands for recording your environment are:
-
-```bash
-git rev-parse HEAD
-node -v
-npm -v
-```
-
-The first prints the current commit identifier. Keep these values with your backup notes.
-
-A lockfile records package resolutions, but it does not contain the downloaded packages themselves. Future installation still depends on those packages being available.
-
-When returning after many years:
-
-1. Identify the saved project revision.
-2. Read its version requirements and documentation.
-3. Recreate the recorded environment where possible.
-4. Install dependencies and run the checks.
-5. Treat upgrades to a supported Node.js version as separate work, with testing.
-
-The original Node.js version may eventually be unsupported. Reproducing an old local demonstration and maintaining a deployed service are different tasks.
-
-Changing `schema.sql` alone also does not migrate existing tables. Its `IF NOT EXISTS` statements leave existing tables in place. Any future database-structure changes need an explicit migration process.
-
-## 17. Common problems
-
-| Symptom | What to check |
+| Problem | What to try |
 | --- | --- |
-| `nvm: command not found` | Reload `~/.bashrc` or open a new terminal after installing nvm. |
-| The wrong Node.js version appears | Enter `backend/` and run `nvm use`. |
-| `npm ci` reports inconsistent package files | Check that package.json and package-lock.json come from the same project revision. |
-| `Could not resolve host` | Check the network connection and DNS before retrying the download. |
-| curl cannot connect to port 3000 | Confirm that the server is running in another terminal. |
-| Port 3000 is already in use | Check whether another copy of the server is already running. |
-| The seed refuses to run | The database already contains records; the seed preserves them. |
-| Morse results are empty | Check the position, time range, stored data, and whether the complete message has finished. |
-| `npm test` reports its default placeholder error | Use the configured `npm run test:morse` command. |
-| Compiled startup cannot find dist/server.js | Run `npm run build` successfully first. |
+| `nvm: command not found` | Run `source ~/.bashrc`, or open a new terminal after installation. |
+| Node.js is not version 24 | Check `node -v`. If using nvm, run `nvm use 24` in the current terminal. |
+| New terminals keep selecting another Node.js version | If you want version 24 as your default, run `nvm alias default 24` and check that your shell loads nvm. |
+| npm cannot find `package.json` | Use `pwd` and enter `backend/` or `frontend/` before running npm commands. |
+| `npm ci` reports mismatched package files | Ensure `package.json` and `package-lock.json` come from the same project revision. |
+| Downloads fail | Check the internet connection and the error message before retrying. |
+| The health check cannot connect | Confirm that the backend is still running in Terminal A. |
+| Port 3000 is already in use | Check for another backend terminal and stop the duplicate server. |
+| The browser cannot open the frontend | Use the Local URL printed by Vite and keep Terminal B running. |
+| The page opens but API requests fail | Check the backend terminal and repeat the health check. |
+| A room button is unavailable | Install a bulb at that position. |
+| Uninstalling is rejected | Turn the bulb off, wait for inactivity to be recognized, and try again. |
+| Deleting a bulb is rejected | It must be uninstalled and have no historical sessions. |
+| The seed refuses to run | Existing records are protected. Continue using them or use an intentionally prepared empty database. |
+| History is empty | Check the selected dates, especially the original seed dates. |
+| Morse finds nothing | Check the range, signal timing, and final wait; update the end time. |
+| Morse returns an unexpected message | Check the result timestamp and review both hold durations and release gaps. |
+| A query reports too many records | Search a shorter time range. |
+| `npm start` cannot find `dist/server.js` | Run `npm run build` successfully inside `backend/` first. |
 
-For the reasoning behind the setup and implementation, see the [Learning Notes](./LearningNotes.md).
+For more background, return to [Structure and Technology](StructureIntro.md).
+
+Documentation updated: 3 November 2026.
