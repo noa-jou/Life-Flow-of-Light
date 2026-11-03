@@ -1,4 +1,4 @@
-# Life Flow of Light — Frontend Learning Notes
+# Life Flow of Light — Frontend Development Journal
 
 **Started:** 21 October 2026  
 **Stage:** React setup and an empty folding-panel layout  

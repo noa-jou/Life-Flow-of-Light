@@ -1,6 +1,6 @@
-# Life Flow of Light — Backend Learning Notes
+# Life Flow of Light — Backend Development Journal
 
-[Project overview](../README.md) · [User Guide](./UserGuide.md) · [Morse Guide](./MorseGuide.md)
+[Project overview](../README.md) · [User Guide](./UserGuide.md) 
 
 **Started:** 15 October 2026  
 **Updated through:** 23 October 2026
@@ -12,7 +12,7 @@ I am building Life Flow of Light as a learning project. I proposed the product c
 
 These notes explain what we built, why each part exists, how I ran it, and what we checked.
 
-Successfully running code does not mean I have already mastered the technology. Some code and explanations were prepared with ChatGPT's assistance. I am keeping this record so I can understand the project more deeply when I return to it.
+Successfully running code does not mean I have already mastered the technology. Almost all the code and explanations were prepared with ChatGPT's assistance. I am keeping this record so I can understand the project more deeply when I return to it.
 
 This document focuses on the backend. The frontend has not yet been implemented at this checkpoint.
 
