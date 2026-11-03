@@ -413,3 +413,21 @@
     letter-spacing: 4px;
     white-space: nowrap;
 }
+
+.morse-letter-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.morse-letter-heading strong {
+  flex: 0 0 24px;
+}
+
+.morse-letter-heading code {
+  font-family: monospace;
+  font-size: 20px;
+  letter-spacing: 4px;
+  white-space: nowrap;
+}
