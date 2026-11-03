@@ -39,8 +39,6 @@
 
 ### 如何閱讀與調整指令
 
-只需要複製程式碼區塊中的指令，不要複製 `noa@penguin:~$` 之類的終端機提示文字。
-
 按照順序執行。如果某個指令失敗，請先查看錯誤訊息，並確認指令是否適用於你的環境，再繼續下一步。
 
 範例使用 Bash：
@@ -147,11 +145,9 @@ Node.js 已包含 npm，不需要另外安裝 npm。
 
 首次下載時，請開啟專案的 GitHub 頁面，從 **Code** 按鈕複製 HTTPS 網址。
 
-將以下範例的 `YOUR_GITHUB_OWNER` 換成實際的儲存庫擁有者：
-
 ```bash
 cd ~
-git clone https://github.com/YOUR_GITHUB_OWNER/Life-Flow-of-Light.git
+git clone https://github.com/noa-jou/Life-Flow-of-Light.git
 cd ~/Life-Flow-of-Light
 ```
 

@@ -39,8 +39,6 @@ Use one browser tab to operate the demonstration. Multiple tabs or clients can s
 
 ### Reading and adapting the commands
 
-Copy only the commands inside each code block. Do not copy a terminal prompt such as `noa@penguin:~$`.
-
 Run the commands in order. If a command fails, check the error and whether the command applies to your environment before continuing.
 
 The examples use Bash:
@@ -147,11 +145,9 @@ If you have already downloaded the complete repository, skip the clone command a
 
 For a first download, open the repository's GitHub page and copy its HTTPS URL from the **Code** button.
 
-Replace `YOUR_GITHUB_OWNER` in this example with the actual repository owner:
-
 ```bash
 cd ~
-git clone https://github.com/YOUR_GITHUB_OWNER/Life-Flow-of-Light.git
+git clone https://github.com/noa-jou/Life-Flow-of-Light.git
 cd ~/Life-Flow-of-Light
 ```
 
