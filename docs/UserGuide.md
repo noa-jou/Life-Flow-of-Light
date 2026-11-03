@@ -29,7 +29,6 @@ Regardless of your operating system, you will need:
 - Node.js 24.x and npm.
 - Git if you download the project using `git clone`.
 - An internet connection to download the project and dependencies.
-- Access to the repository if it is private.
 
 The following steps explain how to prepare these tools on Debian. On another operating system, use the corresponding installation methods for your environment.
 
@@ -150,8 +149,6 @@ cd ~
 git clone https://github.com/noa-jou/Life-Flow-of-Light.git
 cd ~/Life-Flow-of-Light
 ```
-
-The example contains a placeholder, not the actual repository address.
 
 `git clone` downloads the first copy. `git pull` retrieves updates inside an existing checkout.
 

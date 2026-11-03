@@ -6,7 +6,7 @@ Life Flow of Light did not begin on the day I created this GitHub repository.
 
 Its origins lie in a course I attended and a subsequent competition and proposal experience. This document explains where the idea came from, how the current project relates to the earlier proposal, and how I turned my ideas into an interactive software demonstration.
 
-For the implementation details, go to:
+For this repo development process details, go to:
 
 - [Backend Development Journal](BackendDevJournal.md)
 - [Frontend Development Journal](FrontendDevJournal.md)
