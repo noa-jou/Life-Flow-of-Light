@@ -4,7 +4,7 @@
 
 ## Demo Video
 
-[Watch the English demo on YouTube](https://youtu.be/g7_QMzvDtBo)
+[Watch the video demo on YouTube](https://youtu.be/QOIn_nDP72g)
 
 > For clearer interface text, watch in full screen and set the YouTube video quality to **1080p**.
 
