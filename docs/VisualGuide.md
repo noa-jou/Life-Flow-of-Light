@@ -6,7 +6,7 @@
 
 [Watch the video demo on YouTube](https://youtu.be/QOIn_nDP72g)
 
-> For clearer interface text, watch in full screen and set the YouTube video quality to **1080p**.
+> For clearer interface text, watch in full screen and set the YouTube video quality to **720p**.
 
 Life Flow of Light is a proof of concept (PoC) that explores how lighting records can help us observe activity at home. You can simulate room lights in your browser, review their usage history, and experiment with sending Morse code through light signals.
 
