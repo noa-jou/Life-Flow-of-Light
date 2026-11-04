@@ -110,3 +110,5 @@ Copyright © 2026. All rights reserved.
 [如何使用這個專案](docs/UserGuide.zh-TW.md)
 
 [開發歷程](docs/DevJournal.zh-TW.md)
+
+[視覺導覽](docs/VisualGuide.zh-TW.md)

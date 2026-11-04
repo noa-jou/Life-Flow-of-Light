@@ -104,3 +104,5 @@ I welcome discussions with smart home companies, independent living technology p
 
 [Development History](docs/DevJournal.md)
 
+[Visual Demo](docs/VisualGuide.md)
+
